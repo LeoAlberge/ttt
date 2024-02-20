@@ -16,23 +16,31 @@ def main():
     parser.add_argument("--data-root-dir",
                         default=r"C:\Users\LeoAlberge\work\personnal\data"
                                 r"\Totalsegmentator_dataset_small_v201", required=False)
-    parser.add_argument("--out-hdf5", default=r"res.hdf5", required=False)
+    parser.add_argument("--out-hdf5", default=r"res_full.hdf5", required=False)
+    parser.add_argument("--liver-only", default="true", required=False)
 
     args = parser.parse_args()
-    sub_classes = {"liver": 1}
+
+    if args.liver_only == "true":
+        sub_classes = {"liver": 1}
+        num_classes = 2
+    else:
+        sub_classes = None
+        num_classes = 118
+
     h5 = h5py.File(args.out_hdf5, "w")
     h5.create_group("inputs")
     h5.create_group("targets")
     dataset = TotalSegmentatorDataSet(
-            args.data_root_dir,
-            sub_classes=sub_classes,
-            transform=ComposeTransform([
-                VolumeNormalization(),
-                ToTensor(torch.float32, torch.int64),
-                PatchExtractor(),
-                SegmentationOneHotEncoding(num_classes=2),
-                lambda x, y: (x[:, None, :, :, :], y.permute(0, 4, 1, 2, 3))
-            ]))
+        args.data_root_dir,
+        sub_classes=sub_classes,
+        transform=ComposeTransform([
+            VolumeNormalization(),
+            ToTensor(torch.float32, torch.int64),
+            PatchExtractor(),
+            SegmentationOneHotEncoding(num_classes=num_classes),
+            lambda x, y: (x[:, None, :, :, :], y.permute(0, 4, 1, 2, 3))
+        ]))
 
     for c, (inputs, targets) in tqdm(enumerate(iter(dataset)), total=len(dataset)):
         print(inputs.shape, targets.shape)

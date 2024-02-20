@@ -145,7 +145,7 @@ class TotalSegmentatorDataSet(Dataset):
                  transform: Optional[Callable] = None):
         self._transform = transform
         self._data_root_dir = data_root_dir
-        self._indexes = sorted(os.listdir(data_root_dir))
+        self._indexes = sorted([x for x in os.listdir(data_root_dir) if os.path.isdir(x)] )
 
         self._reshape_to_identity = reshape_to_identity
         self._target_spacing = target_spacing
