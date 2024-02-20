@@ -157,32 +157,35 @@ class TotalSegmentatorDataSet(Dataset):
 
     @timeit
     def __getitem__(self, index) -> Tuple[Any, Any]:
-        dir = os.path.join(self._data_root_dir, self._indexes[index])
-        ct = read_nii(os.path.join(dir, "ct.nii.gz"))
-        seg = TTTVolume(np.zeros_like(ct.data,
-                                      dtype=np.float32),
-                        spacing=deepcopy(ct.spacing),
-                        origin_lps=deepcopy(ct.origin_lps),
-                        matrix_ijk_2_lps=deepcopy(ct.matrix_ijk_2_lps))
-        classes = self._sub_classes if self._sub_classes is not None else (
-            TOTAL_SEG_LABELS_TO_CLASS_ID)
-        for c, class_id in classes.items():
-            seg_file = os.path.join(dir, "segmentations", f"{c}.nii.gz")
-            if os.path.isfile(os.path.join(dir, "segmentations", f"{c}.nii.gz")):
-                tmp_seg = read_nii(seg_file)
-                seg.data[np.where(tmp_seg.data == 1)] = class_id
+        try:
+            dir = os.path.join(self._data_root_dir, self._indexes[index])
+            ct = read_nii(os.path.join(dir, "ct.nii.gz"))
+            seg = TTTVolume(np.zeros_like(ct.data,
+                                          dtype=np.float32),
+                            spacing=deepcopy(ct.spacing),
+                            origin_lps=deepcopy(ct.origin_lps),
+                            matrix_ijk_2_lps=deepcopy(ct.matrix_ijk_2_lps))
+            classes = self._sub_classes if self._sub_classes is not None else (
+                TOTAL_SEG_LABELS_TO_CLASS_ID)
+            for c, class_id in classes.items():
+                seg_file = os.path.join(dir, "segmentations", f"{c}.nii.gz")
+                if os.path.isfile(os.path.join(dir, "segmentations", f"{c}.nii.gz")):
+                    tmp_seg = read_nii(seg_file)
+                    seg.data[np.where(tmp_seg.data == 1)] = class_id
 
-        if self._reshape_to_identity:
-            ct = permute_to_identity_matrix(ct)
-            seg = permute_to_identity_matrix(seg)
-        if self._target_spacing is not None:
-            ct = interpolate_to_target_spacing(ct, np.array(self._target_spacing))
-            seg = interpolate_to_target_spacing(seg, np.array(self._target_spacing))
-            seg.data = seg.data.round().astype(np.int32)
+            if self._reshape_to_identity:
+                ct = permute_to_identity_matrix(ct)
+                seg = permute_to_identity_matrix(seg)
+            if self._target_spacing is not None:
+                ct = interpolate_to_target_spacing(ct, np.array(self._target_spacing))
+                seg = interpolate_to_target_spacing(seg, np.array(self._target_spacing))
+                seg.data = seg.data.round().astype(np.int32)
 
-        if self._transform is not None:
-            return self._transform(ct.data, seg.data)
-        return ct.data, seg.data
+            if self._transform is not None:
+                return self._transform(ct.data, seg.data)
+            return ct.data, seg.data
+        except Exception as e:
+            self.__log.error(f"error:{e} for index: {index}")
 
 
 class H5Dataset(Dataset):

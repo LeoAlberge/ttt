@@ -1,3 +1,6 @@
+import logging
+import sys
+
 import h5py
 import torch
 from tqdm import tqdm
@@ -18,6 +21,7 @@ def main():
                                 r"\Totalsegmentator_dataset_small_v201", required=False)
     parser.add_argument("--out-hdf5", default=r"res_full.hdf5", required=False)
     parser.add_argument("--liver-only", default="true", required=False)
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
     args = parser.parse_args()
 
