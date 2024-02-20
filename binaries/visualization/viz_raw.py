@@ -49,8 +49,8 @@ def main():
 
     for i in range(x.shape[0]):
         outdir = f"out_p{i}"
-        vol_data = x[:, :, :, i].numpy()
-        seg_data = y[ :, :, :,i, 1].numpy()
+        vol_data = x[i, :, :, :,].numpy()
+        seg_data = y[i,  :, :, :, 1].numpy()
         os.makedirs(outdir, exist_ok=True)
         for k in range(vol_data.shape[0]):
             if seg_data[k, :, :].sum() > 0:

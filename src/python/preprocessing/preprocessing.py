@@ -1,5 +1,6 @@
 from copy import deepcopy
 from itertools import permutations
+from typing import Any, Optional, Tuple
 
 import numpy as np
 import torch
@@ -92,7 +93,7 @@ class PatchExtractor(TransformBlock):
             pad_d - pad_d // 2,
         )
         tensor = torch.nn.functional.pad(data, padding, mode='constant', value=0)
-        patches = tensor.unfold(0, pd, pd).unfold(1, ph,ph).unfold(2,pw,pw)
+        patches = tensor.unfold(0, pd, pd).unfold(1, ph, ph).unfold(2, pw, pw)
         patches = patches.contiguous().view(-1, pd, ph, pw)
         return patches
 
@@ -105,7 +106,29 @@ class SegmentationOneHotEncoding(TransformBlock):
         self.num_classes = num_classes
 
     def __call__(self, inputs: torch.Tensor, target: torch.Tensor):
-        return inputs, torch.nn.functional.one_hot(target.to(torch.int64), num_classes=self.num_classes)
+        return inputs, torch.nn.functional.one_hot(target.to(torch.int64),
+                                                   num_classes=self.num_classes)
+
+
+class VolumeNormalization(TransformBlock):
+
+    def __init__(self, clipping: Tuple[Optional[float], Optional[float]] = (-1000, 1000),
+                 normalization: str = "unit"):
+        self._clipping = clipping
+        self._normalization = normalization
+
+    def __call__(self, inputs: Any, target: Any):
+
+        target = np.clip(target, self._clipping[0], self._clipping[1])
+        if self._normalization == "unit":
+            m, sd = inputs.mean(), inputs.std()
+            sd = sd + 1e-5
+            target = (target - m) / sd
+        elif self._normalization == "none":
+            pass
+        else:
+            raise NotImplementedError(f"{self._normalization} normalization is not implemented")
+        return inputs, target
 
 
 if __name__ == '__main__':

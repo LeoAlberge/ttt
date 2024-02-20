@@ -11,6 +11,7 @@ from src.python.core.volume import TTTVolume
 from src.python.preprocessing.io.niifty_readers import read_nii
 from src.python.preprocessing.preprocessing import permute_to_identity_matrix, \
     interpolate_to_target_spacing
+import h5py
 
 TOTAL_SEG_CLASS_ID_TO_LABELS = {
     1: "spleen",
@@ -182,3 +183,16 @@ class TotalSegmentatorDataSet(Dataset):
         if self._transform is not None:
             return self._transform(ct.data, seg.data)
         return ct.data, seg.data
+
+
+class H5Dataset(Dataset):
+    def __init__(self, h5_path: str):
+        self._h5_file = h5py.File(h5_path)
+        self._indexes = list(self._h5_file["inputs"])
+
+    def __len__(self):
+        return len(self._indexes)
+
+    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        return self._h5_file["inputs"][self._indexes[index]][()], \
+            self._h5_file["targets"][self._indexes[index]][()]

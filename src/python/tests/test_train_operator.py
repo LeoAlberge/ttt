@@ -10,21 +10,6 @@ from training.training_operator import TrainingOperatorParams, TrainingOperator
 
 
 class FakeData(data.Dataset):
-    """A fake dataset that returns randomly generated images and returns them as PIL images
-
-    Args:
-        size (int, optional): Size of the dataset. Default: 1000 images
-        image_size(tuple, optional): Size if the returned images. Default: (3, 224, 224)
-        num_classes(int, optional): Number of classes in the dataset. Default: 10
-        transform (callable, optional): A function/transform that takes in a PIL image
-            and returns a transformed version. E.g, ``transforms.RandomCrop``
-        target_transform (callable, optional): A function/transform that takes in the
-            target and transforms it.
-        random_offset (int): Offsets the index-based random seed used to
-            generate each image. Default: 0
-
-    """
-
     def __init__(
             self,
             size: int = 1000,
