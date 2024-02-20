@@ -79,7 +79,6 @@ class PatchExtractor(TransformBlock):
         num_patches_d = (d + pd - 1) // pd
         num_patches_h = (h + ph - 1) // ph
         num_patches_w = (w + pw - 1) // pw
-        print(num_patches_d, num_patches_h, num_patches_w)
 
         pad_h = ph - (h % ph)
         pad_w = pw - (w % pw)

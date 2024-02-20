@@ -27,32 +27,31 @@ def main():
 
     if args.liver_only == "true":
         sub_classes = {"liver": 1}
-        num_classes = 2
     else:
         sub_classes = None
-        num_classes = 118
 
     h5 = h5py.File(args.out_hdf5, "w")
     h5.create_group("inputs")
     h5.create_group("targets")
     dataset = TotalSegmentatorDataSet(
         args.data_root_dir,
+        target_spacing=(1.5, 1.5, 1.5),
         sub_classes=sub_classes,
         transform=ComposeTransform([
             VolumeNormalization(),
             ToTensor(torch.float32, torch.int64),
             PatchExtractor(),
-            SegmentationOneHotEncoding(num_classes=num_classes),
-            lambda x, y: (x[:, None, :, :, :], y.permute(0, 4, 1, 2, 3))
+            lambda x, y: (x[:, None, :, :, :], x[:, None, :, :, :])
         ]))
 
-    for c, (inputs, targets) in tqdm(enumerate(iter(dataset)), total=len(dataset)):
+    c = 0
+    for _c, (inputs, targets) in tqdm(enumerate(iter(dataset)), total=len(dataset)):
         if inputs is None:
             continue
-        print(inputs.shape, targets.shape)
         for i in range(inputs.shape[0]):
             h5["inputs"].create_dataset(f"{c}-{i}", data=inputs[i, :, :, :, :])
             h5["targets"].create_dataset(f"{c}-{i}", data=targets[i, :, :, :, :])
+        c += 1
 
 
 if __name__ == '__main__':

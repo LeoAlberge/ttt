@@ -15,3 +15,4 @@ def read_nii(path: str, dtype=np.float32) -> TTTVolume:
                      np.array(image.GetSpacing()),
                      np.array(image.GetDirection()).reshape(3, 3)
                      )
+
