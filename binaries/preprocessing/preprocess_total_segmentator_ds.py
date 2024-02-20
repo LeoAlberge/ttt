@@ -47,6 +47,8 @@ def main():
         ]))
 
     for c, (inputs, targets) in tqdm(enumerate(iter(dataset)), total=len(dataset)):
+        if inputs is None:
+            continue
         print(inputs.shape, targets.shape)
         for i in range(inputs.shape[0]):
             h5["inputs"].create_dataset(f"{c}-{i}", data=inputs[i, :, :, :, :])

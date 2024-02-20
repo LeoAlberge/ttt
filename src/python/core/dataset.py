@@ -187,6 +187,7 @@ class TotalSegmentatorDataSet(Dataset):
             return ct.data, seg.data
         except Exception as e:
             self.__log.error(f"error:{e} for index: {index}")
+            return None, None
 
 
 class H5Dataset(Dataset):
