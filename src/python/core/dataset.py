@@ -4,6 +4,7 @@ from typing import Tuple, List, Optional, Callable, Dict, Any
 
 import numpy as np
 import torch
+from autologging import logged
 from torch.utils.data import Dataset
 
 from src.python.core.benchmarks import timeit
@@ -134,7 +135,7 @@ TOTAL_SEG_CLASS_ID_TO_LABELS = {
 }
 TOTAL_SEG_LABELS_TO_CLASS_ID = {v: k for k, v in TOTAL_SEG_CLASS_ID_TO_LABELS.items()}
 
-
+@logged
 class TotalSegmentatorDataSet(Dataset):
 
     def __init__(self,
