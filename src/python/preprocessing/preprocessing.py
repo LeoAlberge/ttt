@@ -18,7 +18,7 @@ def interpolate_trilinearly(
         out_val: float = 0
 ):
     trinilear_interpolation(
-        in_vol.data,
+        in_vol.data.astype(np.float32, copy=False),
         tuple(in_vol.spacing.flatten()),
         tuple(in_vol.origin_lps.flatten()),
         tuple(in_vol.matrix_ijk_2_lps.flatten()),

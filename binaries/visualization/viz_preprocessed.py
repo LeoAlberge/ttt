@@ -2,34 +2,29 @@ import os
 
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
-from torch.utils.data import DataLoader
 
-from src.python.core.dataset import TotalSegmentatorDataSet, TOTAL_SEG_CLASS_ID_TO_LABELS, H5Dataset
-from src.python.core.volume import TTTVolume
-from src.python.preprocessing.io.niifty_readers import read_nii
-from src.python.preprocessing.preprocessing import permute_to_identity_matrix, \
-    interpolate_to_target_spacing, PatchExtractor, SegmentationOneHotEncoding
-from src.python.preprocessing.transform import ComposeTransform, ToTensor
+from src.python.core.dataset import H5Dataset, TOTAL_SEG_CLASS_ID_TO_LABELS
 
 
 def main():
-    sub_classes = {"liver": 1}
-    x, y = next(iter(H5Dataset("res"))
+    x, y = next(iter(H5Dataset("preprocessed.hdf5")))
+    colors = {c: np.random.rand(3) for c in TOTAL_SEG_CLASS_ID_TO_LABELS.values()}
 
-    for i in range(x.shape[0]):
-        outdir = f"out_p{i}"
-        vol_data = x[i, :, :, :,].numpy()
-        seg_data = y[i,  :, :, :, 1].numpy()
-        os.makedirs(outdir, exist_ok=True)
-        for k in range(vol_data.shape[0]):
-            if seg_data[k, :, :].sum() > 0:
-                plt.figure()
-                plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
-                plt.contour(seg_data[k, :, :],
-                            levels=[0.5],
-                            colors=["r"])
-                plt.savefig(os.path.join(outdir, f"{k}.png"))
+    outdir = "p1"
+    print(y.shape)
+    vol_data = x[0, :, :, :, ]
+    seg_data = y[0, :, :, :]
+    os.makedirs(outdir, exist_ok=True)
+    for k in range(vol_data.shape[0]):
+        print(seg_data[k, : ,: ])
+        if seg_data[k, :, :].sum() > 0:
+            plt.figure()
+            plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
+            for id, l in TOTAL_SEG_CLASS_ID_TO_LABELS.items():
+                if (seg_data[k, :, :] == id).sum() > 0:
+                    plt.contour(seg_data[k, :, :] == id, alpha=0.5, color=colors[l])
+            plt.savefig(os.path.join(outdir, f"{k}.png"))
+            plt.close()
 
 
 if __name__ == '__main__':

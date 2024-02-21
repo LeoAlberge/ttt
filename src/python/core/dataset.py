@@ -169,30 +169,32 @@ class TotalSegmentatorDataSet(Dataset):
         try:
             dir = os.path.join(self._data_root_dir, index_name)
             ct = read_nii(os.path.join(dir, "ct.nii.gz"))
-            seg = TTTVolume(np.zeros_like(ct.data,
-                                          dtype=np.float32),
+            final_segmentation = TTTVolume(np.zeros_like(ct.data,
+                                          dtype=np.uint8),
                             spacing=deepcopy(ct.spacing),
                             origin_lps=deepcopy(ct.origin_lps),
                             matrix_ijk_2_lps=deepcopy(ct.matrix_ijk_2_lps))
+            segmentations:Dict[int, TTTVolume] = {}
             classes = self._sub_classes if self._sub_classes is not None else (
                 TOTAL_SEG_LABELS_TO_CLASS_ID)
             for c, class_id in classes.items():
                 seg_file = os.path.join(dir, "segmentations", f"{c}.nii.gz")
                 if os.path.isfile(os.path.join(dir, "segmentations", f"{c}.nii.gz")):
                     tmp_seg = read_nii(seg_file)
-                    seg.data[np.where(tmp_seg.data == 1)] = class_id
+                    segmentations[class_id] = tmp_seg
 
             if self._reshape_to_identity:
                 ct = permute_to_identity_matrix(ct)
-                seg = permute_to_identity_matrix(seg)
+                segmentations = {k: permute_to_identity_matrix(seg) for k, seg in segmentations.items()}
             if self._target_spacing is not None:
                 ct = interpolate_to_target_spacing(ct, np.array(self._target_spacing))
-                seg = interpolate_to_target_spacing(seg, np.array(self._target_spacing))
-                seg.data = seg.data.round().astype(np.int32)
+                segmentations = {k: interpolate_to_target_spacing(seg, np.array(self._target_spacing)) for k, seg in segmentations.items()}
+                for class_id, seg in segmentations.items():
+                    final_segmentation.data[np.where(seg.data.round()) == 1]= class_id
 
             if self._transform is not None:
-                return self._transform(ct.data, seg.data)
-            return ct.data, seg.data
+                return self._transform(ct.data, final_segmentation.data)
+            return ct.data, final_segmentation.data
         except Exception as e:
             self.__log.error(f"error:{e} for index: {index_name}")
             return None, None
@@ -207,5 +209,7 @@ class H5Dataset(Dataset):
         return len(self._indexes)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
+        if index == len(self):
+            raise StopIteration
         return self._h5_file["inputs"][self._indexes[index]][()], \
             self._h5_file["targets"][self._indexes[index]][()]
