@@ -92,21 +92,21 @@ impl VolumeGeometryTTT {
     }
 }
 
-pub struct VolumeBaseTTT<S>
+pub struct VolumeBaseTTT<S, U>
 where
-    S: Data<Elem = f32>,
+    S: Data<Elem = U>,
 {
     pub data: ArrayBase<S, Ix3>,
     pub geom: VolumeGeometryTTT,
 }
 
-impl<S: Data<Elem = f32>> VolumeBaseTTT<S> {
+impl<U, S: Data<Elem = U>> VolumeBaseTTT<S, U> {
     pub fn new(
         data: ArrayBase<S, Ix3>,
         origin_lps: [f32; 3],
         spacing: [f32; 3],
         in_matrix_lps_to_ijk: [f32; 9],
-    ) -> VolumeBaseTTT<S> {
+    ) -> VolumeBaseTTT<S, U> {
         VolumeBaseTTT {
             data,
             geom: VolumeGeometryTTT::new(origin_lps, spacing, in_matrix_lps_to_ijk),
@@ -114,33 +114,84 @@ impl<S: Data<Elem = f32>> VolumeBaseTTT<S> {
     }
 
     #[inline(always)]
-    pub fn get_voxel(&self, i: usize, j: usize, k: usize) -> Option<&f32> {
+    pub fn get_voxel(&self, i: usize, j: usize, k: usize) -> Option<&U> {
         self.data.get((k, j, i))
     }
 }
 
-impl<S: Data<Elem = f32>> Index<[usize; 3]> for VolumeBaseTTT<S> {
-    type Output = f32;
+impl<U, S: Data<Elem = U>> Index<[usize; 3]> for VolumeBaseTTT<S, U> {
+    type Output = U;
     #[inline(always)]
-    fn index(&self, index_ijk: [usize; 3]) -> &f32 {
+    fn index(&self, index_ijk: [usize; 3]) -> &U {
         unsafe { self.data.uget((index_ijk[2], index_ijk[1], index_ijk[0])) }
     }
 }
 
-impl<S: DataMut<Elem = f32>> IndexMut<[usize; 3]> for VolumeBaseTTT<S> {
+impl<U, S: DataMut<Elem = U>> IndexMut<[usize; 3]> for VolumeBaseTTT<S, U> {
     #[inline(always)]
-    fn index_mut(&mut self, index: [usize; 3]) -> &mut f32 {
+    fn index_mut(&mut self, index: [usize; 3]) -> &mut U {
         unsafe { self.data.uget_mut((index[2], index[1], index[0])) }
     }
 }
 
-pub type VolumeView<'a> = VolumeBaseTTT<ViewRepr<&'a f32>>;
-pub type VolumeViewMut<'a> = VolumeBaseTTT<ViewRepr<&'a mut f32>>;
+pub type VolumeViewF32<'a> = VolumeBaseTTT<ViewRepr<&'a f32>, f32>;
+pub type VolumeViewMutF32<'a> = VolumeBaseTTT<ViewRepr<&'a mut f32>, f32>;
 
-pub fn trinilear_interpolation_(in_vol: &VolumeView, out_vol: &mut VolumeViewMut, out_val: f32) {
+
+pub type VolumeViewU8<'a> = VolumeBaseTTT<ViewRepr<&'a u8>,u8>;
+pub type VolumeViewMutU8<'a> = VolumeBaseTTT<ViewRepr<&'a mut u8>, u8>;
+
+fn neighbor_data<T: Copy>(grid_i: [i32; 3], far_l: [i32; 3], grid_ui: [usize; 3], far_r: [usize; 3], grid_f: [f32; 3], in_vol: &VolumeBaseTTT<ViewRepr<&T>, T>, out_val: T)-> [T;8] {
+    let mut data: [T; 8] = [out_val; 8];
+    if grid_i[0] == far_l[0]
+        || grid_i[1] == far_l[1]
+        || grid_i[2] == far_l[2]
+        || grid_ui[0] == far_r[0]
+        || grid_ui[1] == far_r[1]
+        || grid_ui[2] == far_r[2]
+    {
+        let mut p = [grid_ui[0], grid_ui[1], grid_ui[2]];
+        let mut pp = [
+            (grid_f[0] + 1.0) as usize,
+            (grid_f[1] + 1.0) as usize,
+            (grid_f[2] + 1.0) as usize,
+        ];
+        if grid_i[0] < far_l[0] + 1 {
+            p[0] = std::usize::MAX;
+            pp[0] = 0;
+        }
+        if grid_i[1] < far_l[1] + 1 {
+            p[1] = std::usize::MAX;
+            pp[1] = 0;
+        }
+        if grid_i[2] < far_l[2] + 1 {
+            p[2] = std::usize::MAX;
+            pp[2] = 0;
+        }
+        data[0] = *in_vol.get_voxel(p[0], p[1], p[2]).unwrap_or(&out_val);
+        data[1] = *in_vol.get_voxel(p[0], p[1], pp[2]).unwrap_or(&out_val);
+        data[2] = *in_vol.get_voxel(p[0], pp[1], p[2]).unwrap_or(&out_val);
+        data[3] = *in_vol.get_voxel(p[0], pp[1], pp[2]).unwrap_or(&out_val);
+        data[4] = *in_vol.get_voxel(pp[0], p[1], p[2]).unwrap_or(&out_val);
+        data[5] = *in_vol.get_voxel(pp[0], p[1], pp[2]).unwrap_or(&out_val);
+        data[6] = *in_vol.get_voxel(pp[0], pp[1], p[2]).unwrap_or(&out_val);
+        data[7] = *in_vol.get_voxel(pp[0], pp[1], pp[2]).unwrap_or(&out_val);
+    } else {
+        data[0] = in_vol[[grid_ui[0], grid_ui[1], grid_ui[2]]];
+        data[1] = in_vol[[grid_ui[0], grid_ui[1], grid_ui[2] + 1]];
+        data[2] = in_vol[[grid_ui[0], grid_ui[1] + 1, grid_ui[2]]];
+        data[3] = in_vol[[grid_ui[0], grid_ui[1] + 1, grid_ui[2] + 1]];
+        data[4] = in_vol[[grid_ui[0] + 1, grid_ui[1], grid_ui[2]]];
+        data[5] = in_vol[[grid_ui[0] + 1, grid_ui[1], grid_ui[2] + 1]];
+        data[6] = in_vol[[grid_ui[0] + 1, grid_ui[1] + 1, grid_ui[2]]];
+        data[7] = in_vol[[grid_ui[0] + 1, grid_ui[1] + 1, grid_ui[2] + 1]];
+    }
+    data
+}
+
+pub fn trinilear_interpolation_(in_vol: &VolumeViewF32, out_vol: &mut VolumeViewMutF32, out_val: f32) {
     // Get dimensions of input volume
     let in_dims_kji = in_vol.data.shape();
-    println!("in_dims_kji: {:?}", in_dims_kji);
     let in_dims_ijk = Point3::<usize>::new(in_dims_kji[2], in_dims_kji[1], in_dims_kji[0]);
 
     // Define indices for far left and far right corners
@@ -165,7 +216,7 @@ pub fn trinilear_interpolation_(in_vol: &VolumeView, out_vol: &mut VolumeViewMut
         ];
         let grid_i: [i32; 3] = [grid_f[0] as i32, grid_f[1] as i32, grid_f[2] as i32];
         let grid_ui: [usize; 3] = [grid_f[0] as usize, grid_f[1] as usize, grid_f[2] as usize];
-        let mut data: [f32; 8] = [out_val; 8];
+        
 
         // Handle out-of-bounds cases
         if grid_i[0] < far_l[0]
@@ -177,62 +228,90 @@ pub fn trinilear_interpolation_(in_vol: &VolumeView, out_vol: &mut VolumeViewMut
         {
             *value = out_val;
         } else {
-            if grid_i[0] == far_l[0]
-                || grid_i[1] == far_l[1]
-                || grid_i[2] == far_l[2]
-                || grid_ui[0] == far_r[0]
-                || grid_ui[1] == far_r[1]
-                || grid_ui[2] == far_r[2]
-            {
-                let mut p = [grid_ui[0], grid_ui[1], grid_ui[2]];
-                let mut pp = [
-                    (grid_f[0] + 1.0) as usize,
-                    (grid_f[1] + 1.0) as usize,
-                    (grid_f[2] + 1.0) as usize,
-                ];
-                if grid_i[0] < far_l[0] + 1 {
-                    p[0] = std::usize::MAX;
-                    pp[0] = 0;
-                }
-                if grid_i[1] < far_l[1] + 1 {
-                    p[1] = std::usize::MAX;
-                    pp[1] = 0;
-                }
-                if grid_i[2] < far_l[2] + 1 {
-                    p[2] = std::usize::MAX;
-                    pp[2] = 0;
-                }
-                data[0] = *in_vol.get_voxel(p[0], p[1], p[2]).unwrap_or(&out_val);
-                data[1] = *in_vol.get_voxel(p[0], p[1], pp[2]).unwrap_or(&out_val);
-                data[2] = *in_vol.get_voxel(p[0], pp[1], p[2]).unwrap_or(&out_val);
-                data[3] = *in_vol.get_voxel(p[0], pp[1], pp[2]).unwrap_or(&out_val);
-                data[4] = *in_vol.get_voxel(pp[0], p[1], p[2]).unwrap_or(&out_val);
-                data[5] = *in_vol.get_voxel(pp[0], p[1], pp[2]).unwrap_or(&out_val);
-                data[6] = *in_vol.get_voxel(pp[0], pp[1], p[2]).unwrap_or(&out_val);
-                data[7] = *in_vol.get_voxel(pp[0], pp[1], pp[2]).unwrap_or(&out_val);
-            } else {
-                data[0] = in_vol[[grid_ui[0], grid_ui[1], grid_ui[2]]];
-                data[1] = in_vol[[grid_ui[0], grid_ui[1], grid_ui[2] + 1]];
-                data[2] = in_vol[[grid_ui[0], grid_ui[1] + 1, grid_ui[2]]];
-                data[3] = in_vol[[grid_ui[0], grid_ui[1] + 1, grid_ui[2] + 1]];
-                data[4] = in_vol[[grid_ui[0] + 1, grid_ui[1], grid_ui[2]]];
-                data[5] = in_vol[[grid_ui[0] + 1, grid_ui[1], grid_ui[2] + 1]];
-                data[6] = in_vol[[grid_ui[0] + 1, grid_ui[1] + 1, grid_ui[2]]];
-                data[7] = in_vol[[grid_ui[0] + 1, grid_ui[1] + 1, grid_ui[2] + 1]];
-            }
+            let data =neighbor_data(grid_i, far_l, grid_ui, far_r, grid_f, in_vol, out_val);
             let delta: [f32; 3] = [
                 p_vox_ijk[0] - grid_f[0],
                 p_vox_ijk[1] - grid_f[1],
                 p_vox_ijk[2] - grid_f[2],
             ];
-            *value = (1.0 - delta[0]) * (1.0 - delta[1]) * (1.0 - delta[2]) * data[0]
-                + (1.0 - delta[0]) * (1.0 - delta[1]) * delta[2] * data[1]
-                + (1.0 - delta[0]) * delta[1] * (1.0 - delta[2]) * data[2]
-                + (1.0 - delta[0]) * delta[1] * delta[2] * data[3]
-                + delta[0] * (1.0 - delta[1]) * (1.0 - delta[2]) * data[4]
-                + delta[0] * (1.0 - delta[1]) * delta[2] * data[5]
-                + delta[0] * delta[1] * (1.0 - delta[2]) * data[6]
-                + delta[0] * delta[1] * delta[2] * data[7];
+
+            let w: [f32; 8] = [
+                (1.0 - delta[0]) * (1.0 - delta[1]) * (1.0 - delta[2]),
+                (1.0 - delta[0]) * (1.0 - delta[1]) * delta[2],
+                (1.0 - delta[0]) * delta[1] * (1.0 - delta[2]),
+                (1.0 - delta[0]) * delta[1] * delta[2],
+                delta[0] * (1.0 - delta[1]) * (1.0 - delta[2]),
+                delta[0] * (1.0 - delta[1]) * delta[2],
+                delta[0] * delta[1] * (1.0 - delta[2]),
+                delta[0] * delta[1] * delta[2],
+            ];
+
+            *value = w.iter().zip(data.iter()).map(|(w_i, data_i)| w_i * data_i).sum()
+        }
+    });
+}
+
+
+
+pub fn nearest_neighbor_interpolation_(in_vol: &VolumeViewU8, out_vol: &mut VolumeViewMutU8, out_val: u8) {
+    // Get dimensions of input volume
+    let in_dims_kji = in_vol.data.shape();
+    let in_dims_ijk = Point3::<usize>::new(in_dims_kji[2], in_dims_kji[1], in_dims_kji[0]);
+
+    // Define indices for far left and far right corners
+    let far_l = [-1, -1, -1];
+    let far_r = [in_dims_ijk.x - 1, in_dims_ijk.y - 1, in_dims_ijk.z - 1];
+
+    let out_geom = out_vol.geom;
+    // Perform trilinear interpolation in parallel using Rayon
+    Zip::indexed(&mut out_vol.data).par_for_each(|index_kji, value| {
+        // Transform output point to LPS space
+        let p_lps =
+            out_geom.ijk_2_lps([index_kji.2 as f32, index_kji.1 as f32, index_kji.0 as f32]);
+
+        // Transform output point to voxel space of input volume
+        let p_vox_ijk = in_vol.geom.lps_2_ijk(p_lps);
+
+        // Compute grid indices and coordinates
+        let grid_f = [
+            p_vox_ijk[0].floor(),
+            p_vox_ijk[1].floor(),
+            p_vox_ijk[2].floor(),
+        ];
+        let grid_i: [i32; 3] = [grid_f[0] as i32, grid_f[1] as i32, grid_f[2] as i32];
+        let grid_ui: [usize; 3] = [grid_f[0] as usize, grid_f[1] as usize, grid_f[2] as usize];
+        
+
+        // Handle out-of-bounds cases
+        if grid_i[0] < far_l[0]
+            || grid_i[1] < far_l[1]
+            || grid_i[2] < far_l[2]
+            || grid_ui[0] > far_r[0]
+            || grid_ui[1] > far_r[1]
+            || grid_ui[2] > far_r[2]
+        {
+            *value = out_val;
+        } else {
+            let data = neighbor_data(grid_i, far_l, grid_ui, far_r, grid_f, in_vol, out_val);
+            let delta: [f32; 3] = [
+                p_vox_ijk[0] - grid_f[0],
+                p_vox_ijk[1] - grid_f[1],
+                p_vox_ijk[2] - grid_f[2],
+            ];
+
+            let w: [f32; 8] = [
+                (1.0 - delta[0]) * (1.0 - delta[1]) * (1.0 - delta[2]),
+                (1.0 - delta[0]) * (1.0 - delta[1]) * delta[2],
+                (1.0 - delta[0]) * delta[1] * (1.0 - delta[2]),
+                (1.0 - delta[0]) * delta[1] * delta[2],
+                delta[0] * (1.0 - delta[1]) * (1.0 - delta[2]),
+                delta[0] * (1.0 - delta[1]) * delta[2],
+                delta[0] * delta[1] * (1.0 - delta[2]),
+                delta[0] * delta[1] * delta[2],
+            ];
+            let max_weight_index = w.iter().enumerate().max_by(|(_, a), (_, b)| a.partial_cmp(b).unwrap()).map(|(index, _)| index).unwrap();
+
+            *value = data[max_weight_index];
         }
     });
 }
@@ -256,9 +335,9 @@ fn trinilear_interpolation(
     // Convert PyArray3 to mutable ArrayViewMut3
     let out_vol_data = unsafe { out_vol_data.as_array_mut() };
 
-    let in_vol = VolumeView::new(in_vol_data, in_origin_lps, in_spacing, in_matrix_ijk_to_lps);
+    let in_vol = VolumeViewF32::new(in_vol_data, in_origin_lps, in_spacing, in_matrix_ijk_to_lps);
 
-    let mut out_vol = VolumeViewMut::new(
+    let mut out_vol = VolumeViewMutF32::new(
         out_vol_data,
         out_origin_lps,
         out_spacing,
@@ -269,11 +348,46 @@ fn trinilear_interpolation(
 
     Ok(())
 }
+/// Python function wrapper for neearest_neighbor_interpolation_ function.
+#[pyfunction]
+fn neareast_neighbor_interpolation(
+    in_vol_data: &PyArray3<u8>,
+    in_spacing: [f32; 3],
+    in_origin_lps: [f32; 3],
+    in_matrix_ijk_to_lps: [f32; 9],
+    out_vol_data: &PyArray3<u8>,
+    out_spacing: [f32; 3],
+    out_origin_lps: [f32; 3],
+    out_matrix_ijk_to_lps: [f32; 9],
+    out_val: u8,
+) -> PyResult<()> {
+    // Convert PyArray3 to ArrayView3
+    let in_vol_data = unsafe { in_vol_data.as_array() };
+
+    // Convert PyArray3 to mutable ArrayViewMut3
+    let out_vol_data = unsafe { out_vol_data.as_array_mut() };
+
+    let in_vol = VolumeViewU8::new(in_vol_data, in_origin_lps, in_spacing, in_matrix_ijk_to_lps);
+
+    let mut out_vol = VolumeViewMutU8::new(
+        out_vol_data,
+        out_origin_lps,
+        out_spacing,
+        out_matrix_ijk_to_lps,
+    );
+
+    nearest_neighbor_interpolation_(&in_vol, &mut out_vol, out_val);
+
+    Ok(())
+}
+
 
 /// A Python module implemented in Rust.
 #[pymodule]
 fn ttt_rs(_py: Python, m: &PyModule) -> PyResult<()> {
     // Add trinilear_interpolation function to the module
     m.add_function(wrap_pyfunction!(trinilear_interpolation, m)?)?;
+    m.add_function(wrap_pyfunction!(neareast_neighbor_interpolation, m)?)?;
+
     Ok(())
 }

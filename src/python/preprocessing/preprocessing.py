@@ -4,11 +4,10 @@ from typing import Any, Optional, Tuple
 
 import numpy as np
 import torch
+from ttt_rs import trinilear_interpolation, neareast_neighbor_interpolation
 
 from src.python.core.benchmarks import timeit
 from src.python.core.volume import TTTVolume
-from ttt_rs import trinilear_interpolation
-
 from src.python.preprocessing.transform import TransformBlock
 
 
@@ -31,20 +30,51 @@ def interpolate_trilinearly(
     )
 
 
+def interpolate_nearest_neighbor(
+        in_vol: TTTVolume,
+        out_vol: TTTVolume,
+        out_val: float = 0
+):
+    neareast_neighbor_interpolation(
+        in_vol.data,
+        tuple(in_vol.spacing.flatten()),
+        tuple(in_vol.origin_lps.flatten()),
+        tuple(in_vol.matrix_ijk_2_lps.flatten()),
+        out_vol.data,
+        tuple(out_vol.spacing.flatten()),
+        tuple(out_vol.origin_lps.flatten()),
+        tuple(out_vol.matrix_ijk_2_lps.flatten()),
+        out_val
+
+    )
+
+
 @timeit("interpolate_to_target_spacing")
 def interpolate_to_target_spacing(in_vol: TTTVolume, target_spacing: np.ndarray,
-                                  out_val=0) -> TTTVolume:
+                                  out_val=0, method: str = "trilinear") -> TTTVolume:
     extent = in_vol.spacing * in_vol.data.shape[::-1]
 
     target_dimension = np.round(extent / target_spacing).astype(np.int32)
     new_spacing = extent / target_dimension
-    out_vol = TTTVolume(
-        data=np.zeros((target_dimension[::-1]), dtype=np.float32),
-        spacing=new_spacing,
-        origin_lps=deepcopy(in_vol.origin_lps),
-        matrix_ijk_2_lps=deepcopy(in_vol.matrix_ijk_2_lps)
-    )
-    interpolate_trilinearly(in_vol, out_vol, out_val)
+
+    if method == "trilinear":
+        out_vol = TTTVolume(
+            data=np.zeros((target_dimension[::-1]), dtype=np.float32),
+            spacing=new_spacing,
+            origin_lps=deepcopy(in_vol.origin_lps),
+            matrix_ijk_2_lps=deepcopy(in_vol.matrix_ijk_2_lps)
+        )
+        interpolate_trilinearly(in_vol, out_vol, out_val)
+    elif method == "nearest_neighbor":
+        out_vol = TTTVolume(
+            data=np.zeros((target_dimension[::-1]), dtype=np.uint8),
+            spacing=new_spacing,
+            origin_lps=deepcopy(in_vol.origin_lps),
+            matrix_ijk_2_lps=deepcopy(in_vol.matrix_ijk_2_lps)
+        )
+        interpolate_nearest_neighbor(in_vol, out_vol, out_val)
+    else:
+        raise NotImplementedError(f"No {method} implemented")
     return out_vol
 
 
