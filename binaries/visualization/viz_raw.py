@@ -5,7 +5,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from src.python.core.dataset import TotalSegmentatorDataSet, TOTAL_SEG_CLASS_ID_TO_LABELS
+from src.python.core.dataset import TotalSegmentatorDataSet, TOTAL_SEG_CLASS_ID_TO_LABELS, \
+    TOTAL_SEG_LABELS_TO_CLASS_ID
 from src.python.core.volume import TTTVolume
 from src.python.preprocessing.io.niifty_readers import read_nii
 from src.python.preprocessing.preprocessing import permute_to_identity_matrix, \
@@ -42,7 +43,7 @@ def main():
     #         plt.close()
 
     colors = {c: np.random.rand(3) for c in TOTAL_SEG_CLASS_ID_TO_LABELS.values()}
-    sub_classes=None
+    sub_classes=TOTAL_SEG_LABELS_TO_CLASS_ID
 
     x, y = next(iter(TotalSegmentatorDataSet(
         r"C:\Users\LeoAlberge\work\personnal\data\Totalsegmentator_dataset_small_v201",

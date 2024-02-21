@@ -1,3 +1,4 @@
+import argparse
 import logging
 import sys
 
@@ -7,11 +8,7 @@ import torch
 from tqdm import tqdm
 
 from src.python.core.dataset import TotalSegmentatorDataSet
-
-import argparse
-
-from src.python.preprocessing.preprocessing import PatchExtractor, SegmentationOneHotEncoding, \
-    VolumeNormalization
+from src.python.preprocessing.preprocessing import PatchExtractor, VolumeNormalization
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
 
 
@@ -22,7 +19,7 @@ def main():
                                 r"\Totalsegmentator_dataset_small_v201", required=False)
     parser.add_argument("--out-hdf5", default=r"res_full.hdf5", required=False)
     parser.add_argument("--liver-only", default="false", required=False)
-    parser.add_argument("--size", default="1", required=False)
+    parser.add_argument("--size", default=None, required=False)
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     args = parser.parse_args()
@@ -48,7 +45,7 @@ def main():
             ToTensor(torch.float32, torch.int64),
             PatchExtractor(),
             lambda x, y: (x[:, None, :, :, :].numpy().astype(np.float32),
-                          x[:, None, :, :, :].numpy().astype(np.uint8))
+                          y[:, None, :, :, :].numpy().astype(np.uint8))
         ]),
         size=size)
 
