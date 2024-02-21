@@ -99,8 +99,13 @@ def permute_to_identity_matrix(in_vol: TTTVolume) -> TTTVolume:
 
 
 class PatchExtractor(TransformBlock):
-    def __init__(self, patch_size: tuple[int, int, int] = (96, 96, 96)):
+    def __init__(self,
+                 patch_size: tuple[int, int, int] = (96, 96, 96),
+                 ):
         self._patch_size = patch_size
+
+    def _unfold_patches(self, data: torch.Tensor, origin_shape: torch.Size):
+        return data.view(origin_shape)
 
     def _generate_patches(self, data: torch.Tensor):
         d, h, w = data.shape
@@ -150,11 +155,11 @@ class VolumeNormalization(TransformBlock):
 
     def __call__(self, inputs: Any, target: Any):
 
-        target = np.clip(target, self._clipping[0], self._clipping[1])
+        inputs = np.clip(inputs, self._clipping[0], self._clipping[1])
         if self._normalization == "unit":
             m, sd = inputs.mean(), inputs.std()
             sd = sd + 1e-5
-            target = (target - m) / sd
+            inputs = (inputs - m) / sd
         elif self._normalization == "none":
             pass
         else:
@@ -165,10 +170,12 @@ class VolumeNormalization(TransformBlock):
 if __name__ == '__main__':
     # ds = TotalSegmentatorDataSet(
     #     r"C:\Users\LeoAlberge\work\personnal\data\Totalsegmentator_dataset_small_v201")
+    x= torch.tensor(np.random.rand(152, 143, 541))
+    x_p = PatchExtractor()._generate_patches(x)
+    x_up = PatchExtractor()._unfold_patches(x_p, x.shape)
+    np.testing.assert_allclose(x.numpy(), x_up.numpy())
 
-    # x, y = PatchExtractor()(torch.tensor(np.zeros((152, 143, 541))),
-    #                         torch.tensor(np.zeros((152, 143, 541))))
     # print(x.shape, y.shape)
     #
-    y = SegmentationOneHotEncoding()(torch.tensor(np.zeros((152, 143, 541))))
-    print(y.shape)
+    # y = SegmentationOneHotEncoding()(torch.tensor(np.zeros((152, 143, 541))))
+    # print(y.shape)

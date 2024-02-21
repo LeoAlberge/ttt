@@ -3,18 +3,20 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.python.core.dataset import H5Dataset, TOTAL_SEG_CLASS_ID_TO_LABELS
+from src.python.core.dataset import H5Dataset, TOTAL_SEG_CLASS_ID_TO_LABELS, \
+    TOTAL_SEG_LABELS_TO_CLASS_ID
 
 
 def main():
-    x, y = next(iter(H5Dataset("preprocessed.hdf5")))
     colors = {c: np.random.rand(3) for c in TOTAL_SEG_CLASS_ID_TO_LABELS.values()}
-    outdir = "p2"
-    vol_data = x[0, :, :, :, ]
-    seg_data = y[0, :, :, :]
-    os.makedirs(outdir, exist_ok=True)
-    for k in range(vol_data.shape[0]):
-        if seg_data[k, :, :].sum() > 0:
+    sub_classes = TOTAL_SEG_LABELS_TO_CLASS_ID
+
+    for c, (x, y) in enumerate(iter(H5Dataset("res_full.hdf5"))):
+        outdir = f"p/{c}"
+        vol_data = x[0, :, :, :, ]
+        seg_data = y[0, :, :, :]
+        os.makedirs(outdir, exist_ok=True)
+        for k in range(vol_data.shape[0]):
             plt.figure()
             plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
             for id, l in TOTAL_SEG_CLASS_ID_TO_LABELS.items():

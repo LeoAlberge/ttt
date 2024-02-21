@@ -19,7 +19,8 @@ def main():
                                 r"\Totalsegmentator_dataset_small_v201", required=False)
     parser.add_argument("--out-hdf5", default=r"res_full.hdf5", required=False)
     parser.add_argument("--liver-only", default="false", required=False)
-    parser.add_argument("--size", default=None, required=False)
+    parser.add_argument("--size", default=1, required=False)
+    parser.add_argument("--remove-bg-only", default=True, required=False)
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     args = parser.parse_args()
@@ -29,7 +30,8 @@ def main():
     else:
         size = int(args.size)
     if args.liver_only == "true":
-        sub_classes = {"liver": 1}
+        sub_classes = {"liver": 1, "aorta":2,"kidney": 3}
+
     else:
         sub_classes = None
 
@@ -42,10 +44,10 @@ def main():
         sub_classes=sub_classes,
         transform=ComposeTransform([
             VolumeNormalization(),
-            ToTensor(torch.float32, torch.int64),
+            ToTensor(torch.float32, torch.uint8),
             PatchExtractor(),
-            lambda x, y: (x[:, None, :, :, :].numpy().astype(np.float32),
-                          y[:, None, :, :, :].numpy().astype(np.uint8))
+            lambda x, y: (x[:, None, :, :, :].numpy(),
+                          y[:, None, :, :, :].numpy())
         ]),
         size=size)
 
@@ -54,10 +56,11 @@ def main():
         if inputs is None:
             continue
         for i in range(inputs.shape[0]):
-            h5["inputs"].create_dataset(f"{c}-{i}", data=inputs[i, :, :, :, :].astype(np.float32),
-                                        compression="gzip")
-            h5["targets"].create_dataset(f"{c}-{i}", data=targets[i, :, :, :, :],
-                                         compression="gzip")
+            if args.remove_bg_only and np.sum(targets[i, :, :, :, :]) >0:
+                h5["inputs"].create_dataset(f"{c}-{i}", data=inputs[i, :, :, :, :].astype(np.float32),
+                                            compression="gzip")
+                h5["targets"].create_dataset(f"{c}-{i}", data=targets[i, :, :, :, :],
+                                             compression="gzip")
         c += 1
     h5.close()
 
