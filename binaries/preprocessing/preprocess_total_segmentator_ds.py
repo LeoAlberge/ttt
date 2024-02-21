@@ -22,10 +22,15 @@ def main():
                                 r"\Totalsegmentator_dataset_small_v201", required=False)
     parser.add_argument("--out-hdf5", default=r"res_full.hdf5", required=False)
     parser.add_argument("--liver-only", default="true", required=False)
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+    parser.add_argument("--size", default=None, required=False)
 
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     args = parser.parse_args()
 
+    if args.size is None:
+        size = None
+    else:
+        size = int(args.size)
     if args.liver_only == "true":
         sub_classes = {"liver": 1}
     else:
@@ -42,8 +47,10 @@ def main():
             VolumeNormalization(),
             ToTensor(torch.float32, torch.int64),
             PatchExtractor(),
-            lambda x, y: (x[:, None, :, :, :].numpy().astype(np.float32), x[:, None, :, :, :].numpy().astype(np.uint8))
-        ]))
+            lambda x, y: (x[:, None, :, :, :].numpy().astype(np.float32),
+                          x[:, None, :, :, :].numpy().astype(np.uint8))
+        ]),
+        size=size)
 
     c = 0
     for _c, (inputs, targets) in tqdm(enumerate(iter(dataset)), total=len(dataset)):

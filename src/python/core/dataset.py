@@ -143,7 +143,8 @@ class TotalSegmentatorDataSet(Dataset):
                  reshape_to_identity: bool = True,
                  target_spacing: Optional[Tuple[float, float, float]] = (1, 1, 1),
                  sub_classes: Dict[str, int] = None,
-                 transform: Optional[Callable] = None):
+                 transform: Optional[Callable] = None,
+                 size: Optional[int] = None):
         self._transform = transform
         self._data_root_dir = data_root_dir
         self._indexes = sorted([x for x in os.listdir(data_root_dir) if os.path.isdir(os.path.join(self._data_root_dir, x))] )
@@ -152,9 +153,10 @@ class TotalSegmentatorDataSet(Dataset):
         self._target_spacing = target_spacing
 
         self._sub_classes = sub_classes
+        self._size = size
 
     def __len__(self):
-        return len(self._indexes)
+        return len(self._indexes) if self._size is None else self._size
 
     @timeit("TotalSegmentatorDataSet.get_item")
     def __getitem__(self, index) -> Tuple[Any, Any]:
