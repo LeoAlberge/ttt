@@ -246,7 +246,7 @@ pub fn trinilear_interpolation_(in_vol: &VolumeViewF32, out_vol: &mut VolumeView
                 delta[0] * delta[1] * delta[2],
             ];
             *value = w[0]*data[0]+ w[1]*data[1]+w[2]*data[2]+ w[3]*data[3]+ w[4]*data[4]+ w[5]*data[5]+ w[6]*data[6]+ w[7]*data[7];
-        }
+        };
     });
 }
 
