@@ -31,7 +31,7 @@ def interpolate_trilinearly(
     )
 
 
-@timeit
+@timeit("interpolate_to_target_spacing")
 def interpolate_to_target_spacing(in_vol: TTTVolume, target_spacing: np.ndarray,
                                   out_val=0) -> TTTVolume:
     extent = in_vol.spacing * in_vol.data.shape[::-1]

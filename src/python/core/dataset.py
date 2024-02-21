@@ -156,10 +156,11 @@ class TotalSegmentatorDataSet(Dataset):
     def __len__(self):
         return len(self._indexes)
 
-    @timeit
+    @timeit("TotalSegmentatorDataSet.get_item")
     def __getitem__(self, index) -> Tuple[Any, Any]:
+        index_name = self._indexes[index]
         try:
-            dir = os.path.join(self._data_root_dir, self._indexes[index])
+            dir = os.path.join(self._data_root_dir, index_name)
             ct = read_nii(os.path.join(dir, "ct.nii.gz"))
             seg = TTTVolume(np.zeros_like(ct.data,
                                           dtype=np.float32),
@@ -186,7 +187,7 @@ class TotalSegmentatorDataSet(Dataset):
                 return self._transform(ct.data, seg.data)
             return ct.data, seg.data
         except Exception as e:
-            self.__log.error(f"error:{e} for index: {index}")
+            self.__log.error(f"error:{e} for index: {index_name}")
             return None, None
 
 

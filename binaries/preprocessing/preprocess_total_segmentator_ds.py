@@ -2,6 +2,7 @@ import logging
 import sys
 
 import h5py
+import numpy as np
 import torch
 from tqdm import tqdm
 
@@ -41,7 +42,7 @@ def main():
             VolumeNormalization(),
             ToTensor(torch.float32, torch.int64),
             PatchExtractor(),
-            lambda x, y: (x[:, None, :, :, :], x[:, None, :, :, :])
+            lambda x, y: (x[:, None, :, :, :].numpy().astype(np.float32), x[:, None, :, :, :].numpy().astype(np.uint8))
         ]))
 
     c = 0
@@ -49,8 +50,10 @@ def main():
         if inputs is None:
             continue
         for i in range(inputs.shape[0]):
-            h5["inputs"].create_dataset(f"{c}-{i}", data=inputs[i, :, :, :, :])
-            h5["targets"].create_dataset(f"{c}-{i}", data=targets[i, :, :, :, :])
+            h5["inputs"].create_dataset(f"{c}-{i}", data=inputs[i, :, :, :, :].astype(np.float32),
+                                        compression="gzip")
+            h5["targets"].create_dataset(f"{c}-{i}", data=targets[i, :, :, :, :],
+                                         compression="gzip")
         c += 1
 
 
