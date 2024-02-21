@@ -135,6 +135,7 @@ TOTAL_SEG_CLASS_ID_TO_LABELS = {
 }
 TOTAL_SEG_LABELS_TO_CLASS_ID = {v: k for k, v in TOTAL_SEG_CLASS_ID_TO_LABELS.items()}
 
+
 @logged
 class TotalSegmentatorDataSet(Dataset):
 
@@ -145,9 +146,11 @@ class TotalSegmentatorDataSet(Dataset):
                  sub_classes: Dict[str, int] = None,
                  transform: Optional[Callable] = None,
                  size: Optional[int] = None):
+        super().__init__()
         self._transform = transform
         self._data_root_dir = data_root_dir
-        self._indexes = sorted([x for x in os.listdir(data_root_dir) if os.path.isdir(os.path.join(self._data_root_dir, x))] )
+        self._indexes = sorted([x for x in os.listdir(data_root_dir) if
+                                os.path.isdir(os.path.join(self._data_root_dir, x))])
 
         self._reshape_to_identity = reshape_to_identity
         self._target_spacing = target_spacing
@@ -160,6 +163,8 @@ class TotalSegmentatorDataSet(Dataset):
 
     @timeit("TotalSegmentatorDataSet.get_item")
     def __getitem__(self, index) -> Tuple[Any, Any]:
+        if index == len(self):
+            raise StopIteration
         index_name = self._indexes[index]
         try:
             dir = os.path.join(self._data_root_dir, index_name)

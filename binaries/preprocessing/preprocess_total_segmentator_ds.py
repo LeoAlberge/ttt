@@ -22,7 +22,7 @@ def main():
                                 r"\Totalsegmentator_dataset_small_v201", required=False)
     parser.add_argument("--out-hdf5", default=r"res_full.hdf5", required=False)
     parser.add_argument("--liver-only", default="true", required=False)
-    parser.add_argument("--size", default=None, required=False)
+    parser.add_argument("--size", default="2", required=False)
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     args = parser.parse_args()
@@ -62,7 +62,7 @@ def main():
             h5["targets"].create_dataset(f"{c}-{i}", data=targets[i, :, :, :, :],
                                          compression="gzip")
         c += 1
-
+    h5.close()
 
 if __name__ == '__main__':
     main()

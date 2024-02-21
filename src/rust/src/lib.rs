@@ -33,8 +33,14 @@ pub fn matrices_from_array(
         ),
     ]);
 
-    let unit_quaternion_ijk_to_lps =
-        UnitQuaternion::from_matrix_eps(&rotation_matrix, 1e-7, 10000, UnitQuaternion::identity());
+    let max_iter = 10000;
+    let eps = 1e-6;
+    let unit_quaternion_ijk_to_lps = UnitQuaternion::from_matrix_eps(
+        &rotation_matrix,
+        eps,
+        max_iter,
+        UnitQuaternion::identity(),
+    );
 
     let translation = Translation3::<f32>::new(origin_lps[0], origin_lps[1], origin_lps[2]);
     let matrix_ijk_to_lps = Isometry3::<f32>::from_parts(translation, unit_quaternion_ijk_to_lps);
@@ -54,7 +60,7 @@ impl VolumeGeometryTTT {
         origin_lps: [f32; 3],
         spacing: [f32; 3],
         in_matrix_lps_to_ijk: [f32; 9],
-    ) ->VolumeGeometryTTT {
+    ) -> VolumeGeometryTTT {
         let (matrix_ijk_to_lps, matrix_lps_to_ijk) =
             matrices_from_array(in_matrix_lps_to_ijk, origin_lps);
         VolumeGeometryTTT {
@@ -252,14 +258,14 @@ fn trinilear_interpolation(
 
     let in_vol = VolumeView::new(in_vol_data, in_origin_lps, in_spacing, in_matrix_ijk_to_lps);
 
-    let mut out_vol = VolumeViewMut::new(out_vol_data, out_origin_lps, out_spacing, out_matrix_ijk_to_lps);
-
-    trinilear_interpolation_(
-        &in_vol,
-        &mut out_vol,
-        out_val
-   
+    let mut out_vol = VolumeViewMut::new(
+        out_vol_data,
+        out_origin_lps,
+        out_spacing,
+        out_matrix_ijk_to_lps,
     );
+
+    trinilear_interpolation_(&in_vol, &mut out_vol, out_val);
 
     Ok(())
 }
