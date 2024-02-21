@@ -19,7 +19,7 @@ def main():
                                 r"\Totalsegmentator_dataset_small_v201", required=False)
     parser.add_argument("--out-hdf5", default=r"res_full.hdf5", required=False)
     parser.add_argument("--liver-only", default="false", required=False)
-    parser.add_argument("--size", default=1, required=False)
+    parser.add_argument("--size", default=None, required=False)
     parser.add_argument("--remove-bg-only", default=True, required=False)
 
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
