@@ -228,7 +228,7 @@ pub fn trinilear_interpolation_(in_vol: &VolumeViewF32, out_vol: &mut VolumeView
         {
             *value = out_val;
         } else {
-            let data =neighbor_data(grid_i, far_l, grid_ui, far_r, grid_f, in_vol, out_val);
+            let data: [f32; 8] =neighbor_data(grid_i, far_l, grid_ui, far_r, grid_f, in_vol, out_val);
             let delta: [f32; 3] = [
                 p_vox_ijk[0] - grid_f[0],
                 p_vox_ijk[1] - grid_f[1],
@@ -245,8 +245,7 @@ pub fn trinilear_interpolation_(in_vol: &VolumeViewF32, out_vol: &mut VolumeView
                 delta[0] * delta[1] * (1.0 - delta[2]),
                 delta[0] * delta[1] * delta[2],
             ];
-
-            *value = w.iter().zip(data.iter()).map(|(w_i, data_i)| w_i * data_i).sum()
+            *value = w[0]*data[0]+ w[1]*data[1]+w[2]*data[2]+ w[3]*data[3]+ w[4]*data[4]+ w[5]*data[5]+ w[6]*data[6]+ w[7]*data[7];
         }
     });
 }

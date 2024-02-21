@@ -40,6 +40,7 @@ def main():
 
     x, y = next(iter(TotalSegmentatorDataSet(
         r"C:\Users\LeoAlberge\work\personnal\data\Totalsegmentator_dataset_small_v201",
+        target_spacing=(2,2,2),
         sub_classes=sub_classes,
         transform=ComposeTransform([
             ToTensor(torch.float32, torch.int64),
@@ -48,18 +49,19 @@ def main():
         ]))))
 
     for i in range(x.shape[0]):
-        outdir = f"out_p{i}"
+        outdir = f"out/p{i}"
         vol_data = x[i, :, :, :,].numpy()
         seg_data = y[i,  :, :, :, 1].numpy()
         os.makedirs(outdir, exist_ok=True)
         for k in range(vol_data.shape[0]):
-            if seg_data[k, :, :].sum() > 0:
-                plt.figure()
-                plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
-                plt.contour(seg_data[k, :, :],
-                            levels=[0.5],
-                            colors=["r"])
-                plt.savefig(os.path.join(outdir, f"{k}.png"))
+            # if seg_data[k, :, :].sum() > 0:
+            plt.figure()
+            plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
+            plt.contour(seg_data[k, :, :],
+                        levels=[0.5],
+                        colors=["r"])
+            plt.savefig(os.path.join(outdir, f"{k}.png"))
+            plt.close()
 
 
 if __name__ == '__main__':

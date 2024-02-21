@@ -17,9 +17,9 @@ def main():
         if seg_data[k, :, :].sum() > 0:
             plt.figure()
             plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
-            for id, l in TOTAL_SEG_CLASS_ID_TO_LABELS.items():
-                if (seg_data[k, :, :] == id).sum() > 0:
-                    plt.contour(seg_data[k, :, :] == id, alpha=0.5, color=colors[l])
+            # for id, l in TOTAL_SEG_CLASS_ID_TO_LABELS.items():
+            #     if (seg_data[k, :, :] == id).sum() > 0:
+            #         plt.contour(seg_data[k, :, :] == id, alpha=0.5, color=colors[l])
             plt.savefig(os.path.join(outdir, f"{k}.png"))
             plt.close()
 
