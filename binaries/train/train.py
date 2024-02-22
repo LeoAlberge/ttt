@@ -14,6 +14,7 @@ from src.python.training.losses import CombinedSegmentationLoss
 from src.python.training.metrics import MeanDiceScore
 from src.python.training.training_operator import TrainingOperatorParams, TrainingOperator
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset",
@@ -24,13 +25,13 @@ def main():
                         default=r"6", required=False)
     parser.add_argument("--logging",
                         default=r"INFO", required=False)
+    parser.add_argument("--compiled", default="true", required=False)
     args = parser.parse_args()
 
     if args.logging == "DEBUG":
         logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     elif args.logging == "INFO":
         logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-
 
     epoch = int(args.epochs)
     bs = int(args.bs)
@@ -43,11 +44,13 @@ def main():
     ))
     train_set, val_set = random_split(ds, [0.8, 0.2])
 
-    data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True, pin_memory=True)
+    data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True,
+                                              pin_memory=True)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs)
 
-
     m = UnetR(nb_classes=118).cuda()
+    if args.compiled.lower() == "true":
+        m = torch.compile(m, mode="reduce-overhead")
     print(count_parameters(m))
     optimizer = torch.optim.Adam(m.parameters())
     params = TrainingOperatorParams(
