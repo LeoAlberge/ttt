@@ -28,7 +28,7 @@ def main():
 
     epoch = int(args.epochs)
     bs = int(args.bs)
-    ds = H5Dataset("preprocessed_100.hdf5", transform=ComposeTransform([
+    ds = H5Dataset(args.dataset, transform=ComposeTransform([
         ToTensor(torch.float32, torch.uint8),
         SegmentationOneHotEncoding(118),
         ToTensor(torch.float32, torch.float32),
