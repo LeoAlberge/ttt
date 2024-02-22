@@ -185,7 +185,7 @@ class UnetR(nn.Module):
         print("decoder params:", count_parameters(self.decoder))
 
         self.segmentation_head =nn.Sequential(
-            Conv3dNormActivation(128, 32, padding="same"),
+            Conv3dNormActivation(32, 32, padding="same"),
             Conv3dNormActivation(32, 16, padding="same"),
             Conv3dNormActivation(16, nb_classes, padding="same", kernel_size=1),
         )
