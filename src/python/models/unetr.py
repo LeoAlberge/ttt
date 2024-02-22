@@ -12,6 +12,8 @@ from torchvision.ops import Conv3dNormActivation
 
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
 @logged
 class UnetREncoder(nn.Module):
     def __init__(self,
@@ -66,12 +68,15 @@ class ConvBlock(nn.Module):
                  kernel_size=(3, 3, 3)):
         super().__init__()
 
-        self.conv = torch.nn.Conv3d(in_channels, out_channels, kernel_size, padding="same")
-        self.batch_n = torch.nn.BatchNorm3d(out_channels)
-        self.activation = torch.nn.ReLU()
+        self.inner = nn.Sequential(
+            Conv3dNormActivation(in_channels, out_channels, padding="same",
+                                 kernel_size=kernel_size),
+            Conv3dNormActivation(out_channels, out_channels, padding="same",
+                                 kernel_size=kernel_size),
+        )
 
     def forward(self, input: torch.Tensor):
-        return self.activation(self.batch_n(self.conv(input)))
+        return self.inner(input)
 
 
 @logged
@@ -94,65 +99,65 @@ class DeConvBlock(nn.Module):
 
 class UnetRDecoder(nn.Module):
 
-    def __init__(self, hidden_dim=768):
+    def __init__(self, hidden_dim=768, feature_sz: int = 16):
         super().__init__()
-        self.z2_up_sample = torch.nn.ConvTranspose3d(hidden_dim, 128, (2, 2, 2),
-                                                     stride=(2, 2, 2))
-        self.z9_up_sample = DeConvBlock(hidden_dim, 128)
+        self.z2_up_sample = torch.nn.ConvTranspose3d(
+            hidden_dim, feature_sz * 8,
+            (2, 2, 2),
+            stride=(2, 2, 2))
+        self.z9_up_sample = DeConvBlock(hidden_dim, feature_sz * 8)
         self.z9_conv_block = nn.Sequential(
-            Conv3dNormActivation(256, 128, padding="same"),
-            Conv3dNormActivation(128, 64, padding="same"),
-            DeConvBlock(64, 64)
+            ConvBlock(feature_sz * 16, feature_sz * 4),
+            DeConvBlock(feature_sz * 4, feature_sz * 4)
         )
         self.z6_up_sample = nn.Sequential(
-            DeConvBlock(hidden_dim, 64),
-            DeConvBlock(64, 64),
+            DeConvBlock(hidden_dim, feature_sz * 8),
+            DeConvBlock(feature_sz * 8, feature_sz * 4),
 
         )
 
         self.z6_conv_block = nn.Sequential(
-
-            Conv3dNormActivation(128, 64, padding="same"),
-            Conv3dNormActivation(64, 32, padding="same"),
-            DeConvBlock(32, 32)
+            ConvBlock(feature_sz * 8, feature_sz * 2),
+            DeConvBlock(feature_sz * 2, feature_sz * 2)
 
         )
 
         self.z3_up_sample = nn.Sequential(
-            DeConvBlock(hidden_dim, 32),
-            DeConvBlock(32, 32),
-            DeConvBlock(32, 32),
+            DeConvBlock(hidden_dim, feature_sz * 8),
+            DeConvBlock(feature_sz * 8, feature_sz * 4),
+            DeConvBlock(feature_sz * 4, feature_sz * 2),
 
         )
         self.z3_conv_block = nn.Sequential(
-
-            Conv3dNormActivation(64, 32, padding="same"),
-            Conv3dNormActivation(32, 16, padding="same"),
-            DeConvBlock(16, 16)
+            ConvBlock(feature_sz * 4, feature_sz),
+            DeConvBlock(feature_sz, feature_sz)
 
         )
 
     def forward(self, intermediary_results: List[torch.Tensor]):
-        z3, z6, z9, z12 = intermediary_results[2], intermediary_results[5], intermediary_results[
-            8], \
-            intermediary_results[11]
+        z3, z6, z9, z12 = (intermediary_results[2],
+                           intermediary_results[5],
+                           intermediary_results[8],
+                           intermediary_results[11])
 
         z12_up_sampled = self.z2_up_sample(z12)
         z9_up_sampled = self.z9_up_sample(z9)
-        # print(z12_up_sampled.shape, z9_up_sampled.shape)
         z_12_9_concat = self.z9_conv_block(torch.concat([z12_up_sampled, z9_up_sampled], dim=1))
         z_6_up_sampled = self.z6_up_sample(z6)
-        # print(z_12_9_concat.shape, z_6_up_sampled.shape)
         z_12_9_6_concat = self.z6_conv_block(torch.concat([z_12_9_concat, z_6_up_sampled], dim=1))
         z_3_up_sampled = self.z3_up_sample(z3)
-        # print(z_12_9_6_concat.shape, z_3_up_sampled.shape)
 
         z_12_9_6_3 = self.z3_conv_block(torch.concat([z_12_9_6_concat, z_3_up_sampled], dim=1))
         return z_12_9_6_3
 
 
 class UnetR(nn.Module):
-    def __init__(self, nb_classes: int = 1, hidden_dim=768, patch_size=16, input_dim=96):
+    def __init__(self, nb_classes: int = 1,
+                 hidden_dim=768,
+                 patch_size=16,
+                 input_dim=96,
+                 mlp_dim=3072,
+                 feature_sz: int = 16):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.patch_size = patch_size
@@ -164,10 +169,7 @@ class UnetR(nn.Module):
         )
         print("projection_module params:", count_parameters(self.projection_module))
 
-        self.input_conv_block = nn.Sequential(
-            Conv3dNormActivation(1, 64, padding="same"),
-            Conv3dNormActivation(64, 16, padding="same"),
-        )
+        self.input_conv_block =  ConvBlock(1, feature_sz )
         print("input_conv_block params:", count_parameters(self.input_conv_block))
 
         length = (input_dim // patch_size) ** 3
@@ -175,22 +177,20 @@ class UnetR(nn.Module):
                                     num_layers=12,
                                     num_heads=12,
                                     hidden_dim=hidden_dim,
-                                    mlp_dim=3072,
+                                    mlp_dim=mlp_dim,
                                     dropout=0,
                                     attention_dropout=0
                                     )
 
         print("encoder params:", count_parameters(self.encoder))
-        self.decoder = UnetRDecoder(hidden_dim)
+        self.decoder = UnetRDecoder(hidden_dim, feature_sz=feature_sz)
         print("decoder params:", count_parameters(self.decoder))
 
-        self.segmentation_head =nn.Sequential(
-            Conv3dNormActivation(32, 32, padding="same"),
-            Conv3dNormActivation(32, 16, padding="same"),
-            Conv3dNormActivation(16, nb_classes, padding="same", kernel_size=1),
+        self.segmentation_head = nn.Sequential(
+            ConvBlock(feature_sz*2, feature_sz*4),
+            Conv3dNormActivation(feature_sz*4, nb_classes, padding="same", kernel_size=1, activation_layer=None),
         )
         print("segmentation_head params:", count_parameters(self.segmentation_head))
-
 
     def project_input(self, input: torch.Tensor):
         n, c, d, h, w = input.shape
@@ -221,12 +221,14 @@ class UnetR(nn.Module):
         concat = torch.concat([decoded, self.input_conv_block(input)], dim=1)
         return self.segmentation_head(concat)
 
+
 if __name__ == '__main__':
     print(torch.cuda.is_available())
     print(torch.version.cuda)
     t = torch.tensor(np.zeros(shape=(1, 1, 96, 96, 96), dtype=np.float32))
-
-    r = UnetR(nb_classes=16).forward(t)
+    m =UnetR(nb_classes=16, feature_sz=16, mlp_dim=1536)
+    r = m.forward(t)
+    print(count_parameters(m))
     print(r.shape)
     # t = torch.tensor(np.zeros(shape=(1, 2, 768), dtype=np.float32))
     #
