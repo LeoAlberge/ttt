@@ -96,7 +96,7 @@ class TrainingOperator:
     def fit(self):
         self._logs.setdefault(self._current_epoch, {"metrics": {}})
         self.inner.model.eval()
-        for batch in tqdm(iter(self.inner.val_data_loader)):
+        for batch in tqdm(iter(self.inner.val_data_loader), desc="evaluating"):
             self.val_step(batch)
         self.on_val_end()
         self._current_epoch += 1
@@ -105,10 +105,10 @@ class TrainingOperator:
             self._val_loss.reset()
             self._train_loss.reset()
             self.inner.model.train()
-            for batch in tqdm(iter(self.inner.train_data_loader)):
+            for batch in tqdm(iter(self.inner.train_data_loader), desc="training"):
                 self.train_step(batch)
             self.inner.model.eval()
-            for batch in tqdm(iter(self.inner.val_data_loader)):
+            for batch in tqdm(iter(self.inner.val_data_loader), desc="training"):
                 self.val_step(batch)
             self.on_val_end()
             self._current_epoch += 1
