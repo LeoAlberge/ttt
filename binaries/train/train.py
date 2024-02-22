@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--bs",
                         default=r"6", required=False)
     parser.add_argument("--logging",
-                        default=r"NONE", required=False)
+                        default=r"INFO", required=False)
     args = parser.parse_args()
 
     if args.logging == "DEBUG":

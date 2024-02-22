@@ -87,6 +87,7 @@ class TrainingOperator:
             self._logs[self._current_epoch]["metrics"][
                 name] = m.compute().detach().cpu().numpy().item()
             m.reset()
+        self.__log.info(f"logs: {self._logs[self._current_epoch]}")
         torch.save(self.inner.model.state_dict(),
                    os.path.join(self.inner.weights_dir, f"{self._current_epoch}.pt"))
         with open("logs.json", "w") as f:
@@ -95,7 +96,7 @@ class TrainingOperator:
     def fit(self):
         self._logs.setdefault(self._current_epoch, {"metrics": {}})
         self.inner.model.eval()
-        for batch in iter(self.inner.val_data_loader):
+        for batch in tqdm(iter(self.inner.val_data_loader)):
             self.val_step(batch)
         self.on_val_end()
         self._current_epoch += 1
@@ -107,7 +108,7 @@ class TrainingOperator:
             for batch in tqdm(iter(self.inner.train_data_loader)):
                 self.train_step(batch)
             self.inner.model.eval()
-            for batch in iter(self.inner.val_data_loader):
+            for batch in tqdm(iter(self.inner.val_data_loader)):
                 self.val_step(batch)
             self.on_val_end()
             self._current_epoch += 1
