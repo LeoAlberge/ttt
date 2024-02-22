@@ -107,8 +107,8 @@ class TrainingOperator:
             self._val_loss.reset()
             self._train_loss.reset()
             self.inner.model.train()
-            with tqdm(iter(self.inner.train_data_loader), desc=f"train epoch: {self._current_epoch}") as tepoch:
-                for batch in tepoch :
+            with tqdm(iter(self.inner.train_data_loader), desc=f"train epoch: {self._current_epoch}") as logger:
+                for batch in logger :
                     self.train_step(batch, logger)
             self.on_epoch_end()
             self.inner.model.eval()
