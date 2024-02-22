@@ -29,7 +29,7 @@ def main():
     if args.logging == "DEBUG":
         logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
     elif args.logging == "INFO":
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
 
     epoch = int(args.epochs)
