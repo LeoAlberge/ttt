@@ -5,9 +5,9 @@ from torch.nn.modules.loss import _Loss
 
 
 class DiceSegmentationLoss(_Loss):
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
+    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean', apply_softmax: bool =True) -> None:
         super().__init__(size_average, reduce, reduction)
-
+        self._apply_softmax =apply_softmax
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         """
 
@@ -18,6 +18,8 @@ class DiceSegmentationLoss(_Loss):
         Returns:
 
         """
+        if self._apply_softmax:
+            input = torch.nn.functional.softmax(input, 1)
         num = torch.mul(torch.mul(input, target).sum(dim=[2, 3, 4]), 2)
         denum = torch.mul(input, input).sum(dim=[2, 3, 4]) + torch.mul(target, target).sum(
             dim=[2, 3, 4])

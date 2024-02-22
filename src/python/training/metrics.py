@@ -6,9 +6,10 @@ from torcheval.metrics.metric import TSelf, TComputeReturn
 
 
 class MeanDiceScore(Metric[torch.Tensor]):
-    def __init__(self, device: Optional[torch.device] = None,):
+    def __init__(self, apply_softmax: bool = True, device: Optional[torch.device] = None):
         super().__init__(device=device)
         self._add_state("tmp", [])
+        self._apply_softmax = apply_softmax
 
     def compute(self: TSelf) -> TComputeReturn:
         return torch.mean(torch.cat(self.tmp, -1))
@@ -17,6 +18,8 @@ class MeanDiceScore(Metric[torch.Tensor]):
         raise NotImplementedError()
 
     def update(self: TSelf, input: Any, target: Any) -> TSelf:
+        if self._apply_softmax:
+            input = torch.nn.functional.softmax(input, 1)
         num = torch.mul(torch.mul(input, target).sum(dim=[2, 3, 4]), 2)
         denum = torch.mul(input, input).sum(dim=[2, 3, 4]) + torch.mul(target, target).sum(
             dim=[2, 3, 4])
@@ -36,8 +39,8 @@ if __name__ == '__main__':
     # mdc.reset()
     # m = mdc.compute()
     # print(m)
-    m1 =np.ones((4, 3, 10, 10, 10))
-    m1[:2,:,:,:,:] = 0
+    m1 = np.ones((4, 3, 10, 10, 10))
+    m1[:2, :, :, :, :] = 0
     m1 = torch.tensor(m1)
     m2 = torch.tensor(np.ones((4, 3, 10, 10, 10)))
     mdc = MeanDiceScore()
