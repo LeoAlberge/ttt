@@ -25,7 +25,10 @@ def main():
                         default=r"6", required=False)
     parser.add_argument("--logging",
                         default=r"INFO", required=False)
-    parser.add_argument("--compiled", default="true", required=False)
+    parser.add_argument("--compiled", default="false", required=False)
+    parser.add_argument("--cuda", default="true", required=False)
+    parser.add_argument("--liver-only", default="true", required=False)
+
     args = parser.parse_args()
 
     if args.logging == "DEBUG":
@@ -35,23 +38,36 @@ def main():
 
     epoch = int(args.epochs)
     bs = int(args.bs)
-    ds = H5Dataset(args.dataset, transform=ComposeTransform([
-        # lambda x, y: (x, (y==TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8)),
-        ToTensor(torch.float32, torch.uint8),
-        SegmentationOneHotEncoding(118),
-        ToTensor(torch.float32, torch.float32),
-    ],
-    ))
+    cuda = args.cuda.lower() == "true"
+    liver_only = args.liver_only.lower() == "true"
+    num_classes = 2 if liver_only else 118
+    if liver_only:
+        transform_l = [
+            ToTensor(torch.float32, torch.uint8),
+            lambda x, y: (x, (y == TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8)),
+            SegmentationOneHotEncoding(num_classes),
+            ToTensor(torch.float32, torch.float32),
+        ]
+    else:
+        transform_l = [
+            ToTensor(torch.float32, torch.uint8),
+            SegmentationOneHotEncoding(num_classes),
+            ToTensor(torch.float32, torch.float32),
+        ]
+
+    ds = H5Dataset(args.dataset, transform=ComposeTransform(transform_l))
     train_set, val_set = random_split(ds, [0.8, 0.2])
 
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True,
-                                              pin_memory=True)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs)
-
-    m = UnetR(nb_classes=118).cuda()
+                                              pin_memory=cuda)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs, pin_memory=cuda)
+    m = UnetR(nb_classes=num_classes)
+    if cuda:
+        m = m.cuda()
     if args.compiled.lower() == "true":
         m = torch.compile(m, mode="reduce-overhead")
-    print(count_parameters(m))
+
+    logging.info(f"Number of params {count_parameters(m)}")
     optimizer = torch.optim.Adam(m.parameters())
     params = TrainingOperatorParams(
         model=m,
@@ -62,7 +78,7 @@ def main():
         val_data_loader=val_loader,
         nb_epochs=epoch,
         weights_dir=".",
-        cuda_enabled=True
+        cuda_enabled=cuda
     )
     t = TrainingOperator(params)
     t.fit()
