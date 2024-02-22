@@ -64,9 +64,6 @@ class TrainingOperator:
 
     def val_step(self, batch: Tuple[torch.Tensor, torch.Tensor]):
         inputs, outputs = self._preprocess(batch)
-        if self.inner.cuda_enabled:
-            inputs = inputs.cuda()
-            outputs = outputs.cuda()
         with torch.no_grad():
             y = self.inner.model(inputs)
             l = self.inner.loss(y, outputs)
