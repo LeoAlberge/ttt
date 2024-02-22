@@ -60,19 +60,30 @@ class UnetREncoder(nn.Module):
         return self.ln(tmp), intermediary_results
 
 
+def get_norm_layer(normalization: str):
+    if normalization == "batch_norm":
+        normal_layer = torch.nn.BatchNorm3d
+    elif normalization == "instance":
+        normal_layer = torch.nn.InstanceNorm3d
+    else:
+        raise NotImplementedError("")
+    return normal_layer
+
+
 @logged
 class ConvBlock(nn.Module):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
-                 kernel_size=(3, 3, 3)):
+                 kernel_size=(3, 3, 3),
+                 normalization: str = "batch_norm"):
         super().__init__()
-
+        norm_layer = get_norm_layer(normalization)
         self.inner = nn.Sequential(
             Conv3dNormActivation(in_channels, out_channels, padding="same",
-                                 kernel_size=kernel_size),
+                                 kernel_size=kernel_size, norm_layer=norm_layer),
             Conv3dNormActivation(out_channels, out_channels, padding="same",
-                                 kernel_size=kernel_size),
+                                 kernel_size=kernel_size, norm_layer=norm_layer),
         )
 
     def forward(self, input: torch.Tensor):
@@ -85,52 +96,57 @@ class DeConvBlock(nn.Module):
                  in_channels: int,
                  out_channels: int,
                  deconv_kernel_size=(2, 2, 2),
-                 kernel_size=(3, 3, 3)):
+                 kernel_size=(3, 3, 3),
+                 normalization: str = "batch_norm"):
         super().__init__()
         self.deconv = torch.nn.ConvTranspose3d(in_channels, in_channels, deconv_kernel_size,
                                                stride=(2, 2, 2))
         self.conv = torch.nn.Conv3d(in_channels, out_channels, kernel_size, padding="same")
-        self.batch_n = torch.nn.BatchNorm3d(out_channels)
+        self.norm = get_norm_layer(normalization)(out_channels)
         self.activation = torch.nn.ReLU()
 
     def forward(self, input: torch.Tensor):
-        return self.activation(self.batch_n(self.conv(self.deconv(input))))
+        return self.activation(self.norm(self.conv(self.deconv(input))))
 
 
 class UnetRDecoder(nn.Module):
 
-    def __init__(self, hidden_dim=768, feature_sz: int = 16):
+    def __init__(self,
+                 hidden_dim=768,
+                 feature_sz: int = 16,
+                 normalization: str = "batch_norm"):
         super().__init__()
         self.z2_up_sample = torch.nn.ConvTranspose3d(
             hidden_dim, feature_sz * 8,
             (2, 2, 2),
-            stride=(2, 2, 2))
-        self.z9_up_sample = DeConvBlock(hidden_dim, feature_sz * 8)
+            stride=(2, 2, 2),
+        )
+        self.z9_up_sample = DeConvBlock(hidden_dim, feature_sz * 8, normalization=normalization)
         self.z9_conv_block = nn.Sequential(
-            ConvBlock(feature_sz * 16, feature_sz * 4),
-            DeConvBlock(feature_sz * 4, feature_sz * 4)
+            ConvBlock(feature_sz * 16, feature_sz * 4, normalization=normalization),
+            DeConvBlock(feature_sz * 4, feature_sz * 4, normalization=normalization)
         )
         self.z6_up_sample = nn.Sequential(
-            DeConvBlock(hidden_dim, feature_sz * 8),
-            DeConvBlock(feature_sz * 8, feature_sz * 4),
+            DeConvBlock(hidden_dim, feature_sz * 8, normalization=normalization),
+            DeConvBlock(feature_sz * 8, feature_sz * 4, normalization=normalization),
 
         )
 
         self.z6_conv_block = nn.Sequential(
-            ConvBlock(feature_sz * 8, feature_sz * 2),
-            DeConvBlock(feature_sz * 2, feature_sz * 2)
+            ConvBlock(feature_sz * 8, feature_sz * 2, normalization=normalization),
+            DeConvBlock(feature_sz * 2, feature_sz * 2, normalization=normalization)
 
         )
 
         self.z3_up_sample = nn.Sequential(
-            DeConvBlock(hidden_dim, feature_sz * 8),
-            DeConvBlock(feature_sz * 8, feature_sz * 4),
-            DeConvBlock(feature_sz * 4, feature_sz * 2),
+            DeConvBlock(hidden_dim, feature_sz * 8, normalization=normalization),
+            DeConvBlock(feature_sz * 8, feature_sz * 4, normalization=normalization),
+            DeConvBlock(feature_sz * 4, feature_sz * 2, normalization=normalization),
 
         )
         self.z3_conv_block = nn.Sequential(
-            ConvBlock(feature_sz * 4, feature_sz),
-            DeConvBlock(feature_sz, feature_sz)
+            ConvBlock(feature_sz * 4, feature_sz, normalization=normalization),
+            DeConvBlock(feature_sz, feature_sz, normalization=normalization)
 
         )
 
@@ -157,7 +173,8 @@ class UnetR(nn.Module):
                  patch_size=16,
                  input_dim=96,
                  mlp_dim=3072,
-                 feature_sz: int = 16):
+                 feature_sz: int = 16,
+                 normalization: str = "batch_norm"):
         super().__init__()
         self.hidden_dim = hidden_dim
         self.patch_size = patch_size
@@ -165,11 +182,12 @@ class UnetR(nn.Module):
 
         self.projection_module = nn.Sequential(
             Conv3dNormActivation(1, hidden_dim, kernel_size=(3, 3, 3),
-                                 activation_layer=None, stride=self.patch_size),
+                                 activation_layer=None, stride=self.patch_size,
+                                 norm_layer=get_norm_layer(normalization)),
         )
         print("projection_module params:", count_parameters(self.projection_module))
 
-        self.input_conv_block =  ConvBlock(1, feature_sz )
+        self.input_conv_block = ConvBlock(1, feature_sz)
         print("input_conv_block params:", count_parameters(self.input_conv_block))
 
         length = (input_dim // patch_size) ** 3
@@ -179,16 +197,18 @@ class UnetR(nn.Module):
                                     hidden_dim=hidden_dim,
                                     mlp_dim=mlp_dim,
                                     dropout=0,
-                                    attention_dropout=0
+                                    attention_dropout=0,
                                     )
 
         print("encoder params:", count_parameters(self.encoder))
-        self.decoder = UnetRDecoder(hidden_dim, feature_sz=feature_sz)
+        self.decoder = UnetRDecoder(hidden_dim, feature_sz=feature_sz, normalization=normalization)
         print("decoder params:", count_parameters(self.decoder))
 
         self.segmentation_head = nn.Sequential(
-            ConvBlock(feature_sz*2, feature_sz*4),
-            Conv3dNormActivation(feature_sz*4, nb_classes, padding="same", kernel_size=1, activation_layer=None),
+            ConvBlock(feature_sz * 2, feature_sz * 4, normalization=normalization),
+            Conv3dNormActivation(feature_sz * 4, nb_classes, padding="same", kernel_size=1,
+                                 norm_layer=get_norm_layer(normalization),
+                                 activation_layer=None),
         )
         print("segmentation_head params:", count_parameters(self.segmentation_head))
 
@@ -226,7 +246,7 @@ if __name__ == '__main__':
     print(torch.cuda.is_available())
     print(torch.version.cuda)
     t = torch.tensor(np.zeros(shape=(1, 1, 96, 96, 96), dtype=np.float32))
-    m =UnetR(nb_classes=16, feature_sz=16, mlp_dim=1536)
+    m = UnetR(nb_classes=16, feature_sz=16, mlp_dim=1536, normalization="instance")
     r = m.forward(t)
     print(count_parameters(m))
     print(r.shape)
