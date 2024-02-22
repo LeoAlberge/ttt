@@ -143,7 +143,7 @@ class SegmentationOneHotEncoding(TransformBlock):
 
     def __call__(self, inputs: torch.Tensor, target: torch.Tensor):
         return inputs, torch.nn.functional.one_hot(target.to(torch.int64),
-                                                   num_classes=self.num_classes)
+                                                   num_classes=self.num_classes)[0,:].permute(3,0,1,2)
 
 
 class VolumeNormalization(TransformBlock):

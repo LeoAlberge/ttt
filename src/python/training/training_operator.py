@@ -1,3 +1,5 @@
+import json
+import os.path
 from dataclasses import dataclass
 from typing import Any, Tuple
 from typing import Dict
@@ -19,6 +21,7 @@ class TrainingOperatorParams:
     train_data_loader: DataLoader
     val_data_loader: DataLoader
     nb_epochs: int
+    weights_dir: str
     cuda_enabled: bool = False
 
 
@@ -32,18 +35,25 @@ class TrainingOperator:
         self._val_loss = Mean()
         self._train_loss = Mean()
 
-    def train_step(self, batch: Tuple[torch.Tensor, torch.Tensor]):
-        d = self.inner.model.device
-        inputs, outputs = batch
-        self.__log.debug(f"inputs.shape: {inputs.shape}")
-        self.__log.debug(f"outputs.shape: {outputs.shape}")
+    def _preprocess(self, batch: Tuple[torch.Tensor, torch.Tensor]):
+        inputs, target = batch
+
         if self.inner.cuda_enabled:
             inputs = inputs.cuda()
-            outputs = outputs.cuda()
+            target = target.cuda()
+
+        return inputs, target
+
+    def train_step(self, batch: Tuple[torch.Tensor, torch.Tensor]):
+        inputs, outputs = self._preprocess(batch)
+        self.__log.debug(f"inputs.shape: {inputs.shape}")
+        self.__log.debug(f"outputs.shape: {outputs.shape}")
+
         with torch.set_grad_enabled(True):
             y = self.inner.model(inputs)
+            self.__log.debug(f"y.shape: {y.shape}")
             l = self.inner.loss(y, outputs)
-            self.__log.debug("loss", l)
+            self.__log.debug(f"loss: {l}")
             # clear gradients
             self.inner.optimizer.zero_grad()
             # backward
@@ -53,7 +63,7 @@ class TrainingOperator:
             self._train_loss.update(l)
 
     def val_step(self, batch: Tuple[torch.Tensor, torch.Tensor]):
-        inputs, outputs = batch
+        inputs, outputs = self._preprocess(batch)
         if self.inner.cuda_enabled:
             inputs = inputs.cuda()
             outputs = outputs.cuda()
@@ -76,6 +86,11 @@ class TrainingOperator:
         for name, m in self.inner.metrics.items():
             self._logs[self._current_epoch]["metrics"][
                 name] = m.compute().detach().cpu().numpy().item()
+            m.reset()
+        torch.save(self.inner.model.state_dict(),
+                   os.path.join(self.inner.weights_dir, f"{self._current_epoch}.pt"))
+        with open("logs.json", "w") as f:
+            f.write(json.dumps(self._logs))
 
     def fit(self):
         for i in range(self.inner.nb_epochs):
@@ -90,25 +105,3 @@ class TrainingOperator:
                 self.val_step(batch)
             self.on_val_end()
             self._current_epoch += 1
-
-
-if __name__ == '__main__':
-    import torch
-    from torcheval.metrics import BinaryAUROC
-
-    metric = BinaryAUROC()
-    input = torch.tensor([0.1, 0.5, 0.7, 0.8])
-    input2 = torch.tensor([0.9, 0.5, 0.7, 0.8])
-
-    target = torch.tensor([1, 0, 1, 1])
-    target2 = torch.tensor([1, 0, 1, 1])
-
-    metric.update(input, target)
-    print(metric.compute())
-    metric = BinaryAUROC()
-    metric.update(input2, target2)
-    print(metric.compute())
-    metric = BinaryAUROC()
-    metric.update(input, target)
-    metric.update(input2, target2)
-    print(metric.compute())

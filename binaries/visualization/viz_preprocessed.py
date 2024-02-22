@@ -11,7 +11,7 @@ def main():
     colors = {c: np.random.rand(3) for c in TOTAL_SEG_CLASS_ID_TO_LABELS.values()}
     sub_classes = TOTAL_SEG_LABELS_TO_CLASS_ID
 
-    for c, (x, y) in enumerate(iter(H5Dataset("res_full.hdf5"))):
+    for c, (x, y) in enumerate(iter(H5Dataset("preprocessed_100.hdf5"))):
         outdir = f"p/{c}"
         vol_data = x[0, :, :, :, ]
         seg_data = y[0, :, :, :]
@@ -26,7 +26,8 @@ def main():
                                     levels=[0.5], colors=[colors[l]])
                 plt.savefig(os.path.join(outdir, f"{k}.png"))
                 plt.close()
-
+        if c == 10:
+            break
 
 if __name__ == '__main__':
     main()

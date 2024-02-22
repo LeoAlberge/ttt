@@ -198,13 +198,16 @@ class TotalSegmentatorDataSet(Dataset):
 
 
 class H5Dataset(Dataset):
-    def __init__(self, h5_path: str):
+    def __init__(self, h5_path: str, transform: Optional[Callable] = None, ):
         self._h5_file = h5py.File(h5_path)
         self._indexes = list(self._h5_file["inputs"])
+        self._transform = transform
 
     def __len__(self):
         return len(self._indexes)
 
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        return self._h5_file["inputs"][self._indexes[index]][()], \
+        inputs, targets = self._h5_file["inputs"][self._indexes[index]][()], \
             self._h5_file["targets"][self._indexes[index]][()]
+        if self._transform is not None:
+            return self._transform(inputs, targets)
