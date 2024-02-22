@@ -2,10 +2,11 @@ import argparse
 import logging
 import sys
 
+import numpy as np
 import torch
 from torch.utils.data import random_split
 
-from src.python.core.dataset import H5Dataset
+from src.python.core.dataset import H5Dataset, TOTAL_SEG_LABELS_TO_CLASS_ID
 from src.python.models.unetr import UnetR
 from src.python.preprocessing.preprocessing import SegmentationOneHotEncoding
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
@@ -29,8 +30,9 @@ def main():
     epoch = int(args.epochs)
     bs = int(args.bs)
     ds = H5Dataset(args.dataset, transform=ComposeTransform([
+        lambda x, y: (x, (y==TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8)),
         ToTensor(torch.float32, torch.uint8),
-        SegmentationOneHotEncoding(118),
+        SegmentationOneHotEncoding(2),
         ToTensor(torch.float32, torch.float32),
     ],
     ))
@@ -39,7 +41,7 @@ def main():
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs)
 
-    m = UnetR(nb_classes=118).cuda()
+    m = UnetR(nb_classes=2).cuda()
     optimizer = torch.optim.Adam(m.parameters())
     params = TrainingOperatorParams(
         model=m,
