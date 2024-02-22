@@ -44,7 +44,7 @@ class TrainingOperator:
 
         return inputs, target
 
-    def train_step(self, batch: Tuple[torch.Tensor, torch.Tensor]):
+    def train_step(self, batch: Tuple[torch.Tensor, torch.Tensor], logger: Any):
         inputs, outputs = self._preprocess(batch)
         self.__log.debug(f"inputs.shape: {inputs.shape}")
         self.__log.debug(f"outputs.shape: {outputs.shape}")
@@ -60,7 +60,9 @@ class TrainingOperator:
             l.backward()
             # update parameters
             self.inner.optimizer.step()
-            self._train_loss.update(l.detach().cpu())
+            l = l.detach().cpu()
+            logger.set_postfix(loss=f"{l}")
+            self._train_loss.update(l)
 
     def val_step(self, batch: Tuple[torch.Tensor, torch.Tensor]):
         inputs, outputs = self._preprocess(batch)
@@ -105,11 +107,12 @@ class TrainingOperator:
             self._val_loss.reset()
             self._train_loss.reset()
             self.inner.model.train()
-            for batch in tqdm(iter(self.inner.train_data_loader), desc="training"):
-                self.train_step(batch)
+            with tqdm(iter(self.inner.train_data_loader), desc=f"train epoch: {self._current_epoch}") as tepoch:
+                for batch in tepoch :
+                    self.train_step(batch, logger)
             self.on_epoch_end()
             self.inner.model.eval()
-            for batch in tqdm(iter(self.inner.val_data_loader), desc="training"):
+            for batch in tqdm(iter(self.inner.val_data_loader), desc=f"evaluating: {self._current_epoch}"):
                 self.val_step(batch)
             self.on_val_end()
             self._current_epoch += 1
