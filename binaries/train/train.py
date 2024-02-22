@@ -7,7 +7,7 @@ import torch
 from torch.utils.data import random_split
 
 from src.python.core.dataset import H5Dataset, TOTAL_SEG_LABELS_TO_CLASS_ID
-from src.python.models.unetr import UnetR
+from src.python.models.unetr import UnetR, count_parameters
 from src.python.preprocessing.preprocessing import SegmentationOneHotEncoding
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
 from src.python.training.losses import CombinedSegmentationLoss
@@ -41,7 +41,9 @@ def main():
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs)
 
-    m = UnetR(nb_classes=2).cuda()
+
+    m = UnetR(nb_classes=118)
+    print(count_parameters(m))
     optimizer = torch.optim.Adam(m.parameters())
     params = TrainingOperatorParams(
         model=m,

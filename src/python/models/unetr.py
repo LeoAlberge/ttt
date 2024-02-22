@@ -10,6 +10,8 @@ from torchvision.models.vision_transformer import EncoderBlock
 from torchvision.ops import Conv3dNormActivation
 
 
+def count_parameters(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
 @logged
 class UnetREncoder(nn.Module):
     def __init__(self,
@@ -94,39 +96,39 @@ class UnetRDecoder(nn.Module):
 
     def __init__(self, hidden_dim=768):
         super().__init__()
-        self.z2_up_sample = torch.nn.ConvTranspose3d(hidden_dim, 512, (2, 2, 2),
+        self.z2_up_sample = torch.nn.ConvTranspose3d(hidden_dim, 128, (2, 2, 2),
                                                      stride=(2, 2, 2))
-        self.z9_up_sample = DeConvBlock(hidden_dim, 512)
+        self.z9_up_sample = DeConvBlock(hidden_dim, 128)
         self.z9_conv_block = nn.Sequential(
-            Conv3dNormActivation(1024, 512, padding="same"),
-            Conv3dNormActivation(512, 256, padding="same"),
-            DeConvBlock(256, 256)
+            Conv3dNormActivation(256, 128, padding="same"),
+            Conv3dNormActivation(128, 64, padding="same"),
+            DeConvBlock(64, 64)
         )
         self.z6_up_sample = nn.Sequential(
-            DeConvBlock(hidden_dim, 256),
-            DeConvBlock(256, 256),
+            DeConvBlock(hidden_dim, 64),
+            DeConvBlock(64, 64),
 
         )
 
         self.z6_conv_block = nn.Sequential(
 
-            Conv3dNormActivation(512, 256, padding="same"),
-            Conv3dNormActivation(256, 128, padding="same"),
-            DeConvBlock(128, 128)
+            Conv3dNormActivation(128, 64, padding="same"),
+            Conv3dNormActivation(64, 32, padding="same"),
+            DeConvBlock(32, 32)
 
         )
 
         self.z3_up_sample = nn.Sequential(
-            DeConvBlock(hidden_dim, 128),
-            DeConvBlock(128, 128),
-            DeConvBlock(128, 128),
+            DeConvBlock(hidden_dim, 32),
+            DeConvBlock(32, 32),
+            DeConvBlock(32, 32),
 
         )
         self.z3_conv_block = nn.Sequential(
 
-            Conv3dNormActivation(256, 128, padding="same"),
-            Conv3dNormActivation(128, 64, padding="same"),
-            DeConvBlock(64, 64)
+            Conv3dNormActivation(64, 32, padding="same"),
+            Conv3dNormActivation(32, 16, padding="same"),
+            DeConvBlock(16, 16)
 
         )
 
@@ -160,11 +162,14 @@ class UnetR(nn.Module):
             Conv3dNormActivation(1, hidden_dim, kernel_size=(3, 3, 3),
                                  activation_layer=None, stride=self.patch_size),
         )
+        print("projection_module params:", count_parameters(self.projection_module))
 
         self.input_conv_block = nn.Sequential(
             Conv3dNormActivation(1, 64, padding="same"),
-            Conv3dNormActivation(64, 64, padding="same"),
+            Conv3dNormActivation(64, 16, padding="same"),
         )
+        print("input_conv_block params:", count_parameters(self.input_conv_block))
+
         length = (input_dim // patch_size) ** 3
         self.encoder = UnetREncoder(seq_length=length,
                                     num_layers=12,
@@ -174,13 +179,18 @@ class UnetR(nn.Module):
                                     dropout=0,
                                     attention_dropout=0
                                     )
+
+        print("encoder params:", count_parameters(self.encoder))
         self.decoder = UnetRDecoder(hidden_dim)
+        print("decoder params:", count_parameters(self.decoder))
 
         self.segmentation_head =nn.Sequential(
-            Conv3dNormActivation(128, 64, padding="same"),
-            Conv3dNormActivation(64, 32, padding="same"),
-            Conv3dNormActivation(32, nb_classes, padding="same", kernel_size=1),
+            Conv3dNormActivation(128, 32, padding="same"),
+            Conv3dNormActivation(32, 16, padding="same"),
+            Conv3dNormActivation(16, nb_classes, padding="same", kernel_size=1),
         )
+        print("segmentation_head params:", count_parameters(self.segmentation_head))
+
 
     def project_input(self, input: torch.Tensor):
         n, c, d, h, w = input.shape
