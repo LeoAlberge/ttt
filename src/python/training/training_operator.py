@@ -67,9 +67,12 @@ class TrainingOperator:
         if self.inner.cuda_enabled:
             inputs = inputs.cuda()
             outputs = outputs.cuda()
+        with torch.no_grad():
+            y = self.inner.model(inputs)
+            l = self.inner.loss(y, outputs)
 
-        y = self.inner.model(inputs)
-        l = self.inner.loss(y, outputs)
+        y = y.detach().cpu()
+        outputs = outputs.detach().cpu()
         self.__log.debug(f"val loss: {l}")
         self._val_loss.update(l.detach().cpu())
         for m in self.inner.metrics.values():
