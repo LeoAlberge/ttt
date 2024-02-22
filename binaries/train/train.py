@@ -39,7 +39,7 @@ def main():
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True, pin_memory=True)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs)
 
-    m = UnetR(nb_classes=118)
+    m = UnetR(nb_classes=118).cuda()
     optimizer = torch.optim.Adam(m.parameters())
     params = TrainingOperatorParams(
         model=m,
