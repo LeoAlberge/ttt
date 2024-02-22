@@ -35,9 +35,9 @@ def main():
     epoch = int(args.epochs)
     bs = int(args.bs)
     ds = H5Dataset(args.dataset, transform=ComposeTransform([
-        lambda x, y: (x, (y==TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8)),
+        # lambda x, y: (x, (y==TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8)),
         ToTensor(torch.float32, torch.uint8),
-        SegmentationOneHotEncoding(2),
+        SegmentationOneHotEncoding(118),
         ToTensor(torch.float32, torch.float32),
     ],
     ))
@@ -47,7 +47,7 @@ def main():
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs)
 
 
-    m = UnetR(nb_classes=2).cuda()
+    m = UnetR(nb_classes=118).cuda()
     print(count_parameters(m))
     optimizer = torch.optim.Adam(m.parameters())
     params = TrainingOperatorParams(
