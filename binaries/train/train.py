@@ -59,8 +59,8 @@ def main():
     train_set, val_set = random_split(ds, [0.8, 0.2])
 
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True,
-                                              pin_memory=cuda)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs, pin_memory=cuda)
+                                              pin_memory=cuda, num_workers=4)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs, pin_memory=cuda, num_workers=4)
     m = UnetR(nb_classes=num_classes)
     if cuda:
         m = m.cuda()
