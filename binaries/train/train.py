@@ -61,14 +61,14 @@ def main():
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True,
                                               pin_memory=cuda, num_workers=4)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs, pin_memory=cuda, num_workers=4)
-    m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="instance")
+    m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
     if cuda:
         m = m.cuda()
     if args.compiled.lower() == "true":
         m = torch.compile(m, mode="reduce-overhead")
 
     logging.info(f"Number of params {count_parameters(m)}")
-    optimizer = torch.optim.AdamW(m.parameters(), lr=1e-4)
+    optimizer = torch.optim.AdamW(m.parameters())
     params = TrainingOperatorParams(
         model=m,
         optimizer=optimizer,

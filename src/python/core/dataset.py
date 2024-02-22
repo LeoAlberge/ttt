@@ -211,3 +211,4 @@ class H5Dataset(Dataset):
             self._h5_file["targets"][self._indexes[index]][()]
         if self._transform is not None:
             return self._transform(inputs, targets)
+        return inputs, targets

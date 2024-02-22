@@ -239,7 +239,8 @@ class UnetR(nn.Module):
                                 x in intermediary_results]
         decoded = self.decoder(intermediary_results)
         concat = torch.concat([decoded, self.input_conv_block(input)], dim=1)
-        return self.segmentation_head(concat)
+        res = self.segmentation_head(concat)
+        return res
 
 
 if __name__ == '__main__':
