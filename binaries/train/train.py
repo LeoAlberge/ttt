@@ -22,10 +22,15 @@ def main():
                         default=r"2", required=False)
     parser.add_argument("--bs",
                         default=r"6", required=False)
+    parser.add_argument("--logging",
+                        default=r"NONE", required=False)
     args = parser.parse_args()
 
+    if args.logging == "DEBUG":
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+    elif args.logging == "INFO":
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-    logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
     epoch = int(args.epochs)
     bs = int(args.bs)
