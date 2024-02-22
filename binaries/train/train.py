@@ -19,11 +19,15 @@ def main():
                         default=r"preprocessed_100.hdf5", required=False)
     parser.add_argument("--epochs",
                         default=r"2", required=False)
+    parser.add_argument("--bs",
+                        default=r"6", required=False)
     args = parser.parse_args()
-    epoch = int(args.epochs)
+
+
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
-    
+    epoch = int(args.epochs)
+    bs = int(args.bs)
     ds = H5Dataset("preprocessed_100.hdf5", transform=ComposeTransform([
         ToTensor(torch.float32, torch.uint8),
         SegmentationOneHotEncoding(118),
@@ -32,8 +36,8 @@ def main():
     ))
     train_set, val_set = random_split(ds, [0.8, 0.2])
 
-    data_loader = torch.utils.data.DataLoader(train_set)
-    val_loader = torch.utils.data.DataLoader(val_set)
+    data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True, pin_memory=True)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs)
 
     m = UnetR(nb_classes=118)
     optimizer = torch.optim.Adam(m.parameters())
@@ -46,6 +50,7 @@ def main():
         val_data_loader=val_loader,
         nb_epochs=epoch,
         weights_dir=".",
+        cuda_enabled=True
     )
     t = TrainingOperator(params)
     t.fit()
