@@ -43,8 +43,8 @@ def main():
     num_classes = 2 if liver_only else 118
     if liver_only:
         transform_l = [
-            ToTensor(torch.float32, torch.uint8),
             lambda x, y: (x, (y == TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8)),
+            ToTensor(torch.float32, torch.uint8),
             SegmentationOneHotEncoding(num_classes),
             ToTensor(torch.float32, torch.float32),
         ]
