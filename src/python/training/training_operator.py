@@ -93,6 +93,12 @@ class TrainingOperator:
             f.write(json.dumps(self._logs))
 
     def fit(self):
+        self._logs.setdefault(self._current_epoch, {"metrics": {}})
+        self.inner.model.eval()
+        for batch in iter(self.inner.val_data_loader):
+            self.val_step(batch)
+        self.on_val_end()
+        self._current_epoch += 1
         for i in range(self.inner.nb_epochs):
             self._logs.setdefault(self._current_epoch, {"metrics": {}})
             self._val_loss.reset()
