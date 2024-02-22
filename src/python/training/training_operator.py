@@ -60,7 +60,7 @@ class TrainingOperator:
             l.backward()
             # update parameters
             self.inner.optimizer.step()
-            self._train_loss.update(l)
+            self._train_loss.update(l.detach().cpu())
 
     def val_step(self, batch: Tuple[torch.Tensor, torch.Tensor]):
         inputs, outputs = self._preprocess(batch)
@@ -71,7 +71,7 @@ class TrainingOperator:
         y = self.inner.model(inputs)
         l = self.inner.loss(y, outputs)
         self.__log.debug(f"val loss: {l}")
-        self._val_loss.update(l)
+        self._val_loss.update(l.detach().cpu())
         for m in self.inner.metrics.values():
             m.update(y, outputs)
         return l
