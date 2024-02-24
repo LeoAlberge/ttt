@@ -180,7 +180,7 @@ class AbstractPretrainableModel(abc.ABC, nn.Module):
         pretrained_state_dict = {k: v for k, v in pretrained_state_dict.items() if
                                  k in self.state_dict()}
         pretrained_state_dict = self.filter_not_pretrainable(pretrained_state_dict)
-        self.load_state_dict(pretrained_state_dict)
+        self.load_state_dict(pretrained_state_dict, strict=False)
 
 
 class UnetR(AbstractPretrainableModel):
