@@ -57,16 +57,14 @@ class TrainingOperator:
                 if regex_res := weights_regex.search(file):
                     epoch = int(regex_res.group(1))
                     epoch_to_weights[epoch] = os.path.join(self.inner.weights_dir, file)
-            print(epoch_to_weights)
             if len(epoch_to_weights) > 0:
-                last_epoch= np.argmax(list(epoch_to_weights.keys()))
-                w_path =epoch_to_weights[last_epoch]
+                last_epoch = np.max(list(epoch_to_weights.keys()))
+                w_path = epoch_to_weights[last_epoch]
                 self.inner.model.load_state_dict(
                     torch.load(w_path, map_location=self.inner.model.device))
                 self._current_epoch = last_epoch + 1
-                self.__log.info(f"Loaded weights from epoch {last_epoch}: {w_path}") # type: ignore
-                self.__log.info(f"Will start epoch: {self._current_epoch}") # type: ignore
-
+                self.__log.info(f"Loaded weights from epoch {last_epoch}: {w_path}")  # type: ignore
+                self.__log.info(f"Will start epoch: {self._current_epoch}")  # type: ignore
 
     def _preprocess(self, batch: Tuple[torch.Tensor, torch.Tensor]):
         inputs, target = batch
