@@ -1,13 +1,19 @@
-import numpy as np
 import torch
 from torch import Tensor
 from torch.nn.modules.loss import _Loss
 
 
 class DiceSegmentationLoss(_Loss):
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean', apply_softmax: bool =True) -> None:
+    def __init__(self,
+                 ignore_background: bool = False,
+                 apply_softmax: bool = True,
+                 size_average=None,
+                 reduce=None,
+                 reduction: str = 'mean') -> None:
         super().__init__(size_average, reduce, reduction)
-        self._apply_softmax =apply_softmax
+        self._apply_softmax = apply_softmax
+        self._ignore_background = ignore_background
+
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         """
 
@@ -20,6 +26,11 @@ class DiceSegmentationLoss(_Loss):
         """
         if self._apply_softmax:
             input = torch.nn.functional.softmax(input, 1)
+
+        if self._ignore_background:
+            input = input[:, 1:, :, :, :]
+            target = target[:, 1:, :, :, :]
+
         num = torch.mul(torch.mul(input, target).sum(dim=[2, 3, 4]), 2)
         denum = torch.mul(input, input).sum(dim=[2, 3, 4]) + torch.mul(target, target).sum(
             dim=[2, 3, 4])
@@ -32,7 +43,6 @@ class DiceSegmentationLoss(_Loss):
         raise NotImplementedError(f"{self.reduction} is not Defined")
 
 
-
 class CombinedSegmentationLoss(_Loss):
     def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
         super().__init__(size_average, reduce, reduction)
@@ -40,10 +50,4 @@ class CombinedSegmentationLoss(_Loss):
         self._dice_loss = DiceSegmentationLoss(reduction=reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        return self._ce.forward(input, target)  + self._dice_loss(input, target)
-
-if __name__ == '__main__':
-    m1 = torch.tensor(np.ones((3, 5, 10, 10, 10)))
-    m2 = torch.tensor(np.ones((3, 5, 10, 10, 10)))
-
-    print(DiceSegmentationLoss().forward(m1, m2).shape)
+        return self._ce.forward(input, target) + self._dice_loss(input, target)

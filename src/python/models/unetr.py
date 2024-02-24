@@ -1,3 +1,4 @@
+import abc
 from collections import OrderedDict
 from functools import partial
 from typing import Callable, List
@@ -167,7 +168,16 @@ class UnetRDecoder(nn.Module):
         return z_12_9_6_3
 
 
-class UnetR(nn.Module):
+class AbstractPretrainableModel(abc.ABC, nn.Module):
+
+    def load_from_pretrained(self, pretrained_w_path: str):
+        pretrained_state_dict = torch.load(pretrained_w_path)
+        pretrained_state_dict = {k: v for k, v in pretrained_state_dict.items() if
+                                 k in self.state_dict()}
+        self.load_state_dict(pretrained_state_dict)
+
+
+class UnetR(AbstractPretrainableModel):
     def __init__(self, nb_classes: int = 1,
                  hidden_dim=768,
                  patch_size=16,

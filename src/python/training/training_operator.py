@@ -12,6 +12,8 @@ from torch.utils.data import DataLoader
 from torcheval.metrics import Metric, Mean
 from tqdm import tqdm
 
+from src.python.models.unetr import AbstractPretrainableModel
+
 
 @dataclass
 class ReloadWeightsConfig:
@@ -20,7 +22,7 @@ class ReloadWeightsConfig:
 
 @dataclass
 class TrainingOperatorParams:
-    model: nn.Module
+    model: AbstractPretrainableModel
     optimizer: torch.optim.Optimizer
     loss: Any
     metrics: Dict[str, Metric[torch.Tensor]]
@@ -60,8 +62,7 @@ class TrainingOperator:
             if len(epoch_to_weights) > 0:
                 last_epoch = np.max(list(epoch_to_weights.keys()))
                 w_path = epoch_to_weights[last_epoch]
-                self.inner.model.load_state_dict(
-                    torch.load(w_path))
+                self.inner.model.load_from_pretrained(w_path)
                 self._current_epoch = last_epoch + 1
                 self.__log.info(f"Loaded weights from epoch {last_epoch}: {w_path}")  # type: ignore
                 self.__log.info(f"Will start epoch: {self._current_epoch}")  # type: ignore

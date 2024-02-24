@@ -21,17 +21,21 @@ def main():
         vol_data = x[0, :, :, :, ]
         if (y[0, :, :, :] == TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).sum() > 0:
             outdir = f"pred/{c}"
-            seg_data = torch.nn.functional.softmax(m.forward(torch.tensor(x[np.newaxis,:])), dim=1).detach().cpu().numpy()[0,1,:,:,:]
+            seg_data = torch.nn.functional.softmax(m.forward(torch.tensor(x[np.newaxis,:])), dim=1).detach().cpu().numpy()[0,:]
+            liver_proba = seg_data[1,:,:,:]
+            seg_liver = np.argmax(seg_data, axis=0)
+
+
             os.makedirs(outdir, exist_ok=True)
             for k in range(vol_data.shape[0]):
                 plt.figure()
                 plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
-                plt.imshow(seg_data[k, :, :], cmap="hot", interpolation="bilinear", alpha=0.3, vmin=0, vmax=1)
+                plt.imshow(liver_proba[k, :, :], cmap="hot", interpolation="bilinear", alpha=0.3, vmin=0, vmax=1)
                 plt.colorbar()
 
                 plt.contour((y[0, k, :, :] == TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8),
                             levels=[0.5], colors=["green"])
-                plt.contour(seg_data[k, :, :],
+                plt.contour(seg_liver[k,:,:],
                             levels=[0.5], colors=["red"])
                 plt.savefig(os.path.join(outdir, f"{k}.png"))
                 plt.close()
