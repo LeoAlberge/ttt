@@ -74,7 +74,7 @@ def main():
         m = torch.compile(m, mode="reduce-overhead")
 
     logging.info(f"Number of params {count_parameters(m)}")
-    optimizer = torch.optim.AdamW(m.parameters())
+    optimizer = torch.optim.AdamW(m.parameters(),lr=1e-4)
     params = TrainingOperatorParams(
         model=m,
         optimizer=optimizer,
