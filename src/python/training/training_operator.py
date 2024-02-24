@@ -7,7 +7,6 @@ from typing import Any, Tuple, Dict
 import numpy as np
 import torch.optim
 from autologging import logged
-from torch import nn
 from torch.utils.data import DataLoader
 from torcheval.metrics import Metric, Mean
 from tqdm import tqdm
@@ -120,6 +119,8 @@ class TrainingOperator:
     def on_epoch_end(self):
         self._logs[self._current_epoch]["metrics"][
             "train_loss"] = self._train_loss.compute().cpu().numpy().item()
+        torch.save(self.inner.model.state_dict(),
+                   os.path.join(self.inner.weights_dir, f"{self._current_epoch}.pt"))
 
     def on_val_end(self):
         self._logs[self._current_epoch]["metrics"][
@@ -129,8 +130,6 @@ class TrainingOperator:
                 name] = m.compute().detach().cpu().numpy().tolist()
             m.reset()
         self.__log.info(f"logs: {self._logs[self._current_epoch]}")  # type: ignore
-        torch.save(self.inner.model.state_dict(),
-                   os.path.join(self.inner.weights_dir, f"{self._current_epoch}.pt"))
         with open(self._log_path(), "w") as f:
             f.write(json.dumps(self._logs))
 
