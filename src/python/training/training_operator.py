@@ -17,6 +17,7 @@ from src.python.models.unetr import AbstractPretrainableModel
 @dataclass
 class ReloadWeightsConfig:
     enabled: bool = True
+    mode: str = "reload_last"
 
 
 @dataclass
@@ -31,7 +32,7 @@ class TrainingOperatorParams:
     exp_dir: str
     weights_dir: str
     reload_weights: ReloadWeightsConfig
-    cuda_enabled: bool = False
+    device: torch.device
 
 
 @logged
@@ -40,8 +41,8 @@ class TrainingOperator:
         self.inner = params
         self._logs = {}
         self._current_epoch = 0
-        self._val_loss = Mean()
-        self._train_loss = Mean()
+        self._val_loss = Mean(device=self.inner.device)
+        self._train_loss = Mean(device=self.inner.device)
         self.reload_weights()
 
     def _log_path(self) -> str:
@@ -61,7 +62,12 @@ class TrainingOperator:
             if len(epoch_to_weights) > 0:
                 last_epoch = np.max(list(epoch_to_weights.keys()))
                 w_path = epoch_to_weights[last_epoch]
-                self.inner.model.load_from_pretrained(w_path)
+                if self.inner.reload_weights.mode == "pretrained":
+                    self.inner.model.load_from_pretrained(w_path)
+                elif self.inner.reload_weights.mode == "reload_last":
+                    self.inner.model.load_state_dict(torch.load(w_path))
+                else:
+                    raise NotImplementedError(f"{self.inner.reload_weights.mode} does not exist")
                 self._current_epoch = last_epoch + 1
                 self.__log.info(f"Loaded weights from epoch {last_epoch}: {w_path}")  # type: ignore
                 self.__log.info(f"Will start epoch: {self._current_epoch}")  # type: ignore
@@ -69,10 +75,8 @@ class TrainingOperator:
     def _preprocess(self, batch: Tuple[torch.Tensor, torch.Tensor]):
         inputs, target = batch
 
-        if self.inner.cuda_enabled:
-            inputs = inputs.cuda()
-            target = target.cuda()
-
+        inputs = inputs.to(self.inner.device)
+        target = target.to(self.inner.device)
         return inputs, target
 
     def train_step(self, batch: Tuple[torch.Tensor, torch.Tensor], logger: Any):
@@ -100,13 +104,10 @@ class TrainingOperator:
         with torch.no_grad():
             y = self.inner.model(inputs)
             l = self.inner.loss(y, outputs)
-
-        y = y.detach().cpu()
-        outputs = outputs.detach().cpu()
-        self.__log.debug(f"val loss: {l}")  # type: ignore
-        self._val_loss.update(l.detach().cpu())
-        for m in self.inner.metrics.values():
-            m.update(y, outputs)
+            self.__log.debug(f"val loss: {l}")  # type: ignore
+            self._val_loss.update(l)
+            for m in self.inner.metrics.values():
+                m.update(y, outputs)
         return l
 
     def on_epoch_start(self):
@@ -118,13 +119,13 @@ class TrainingOperator:
 
     def on_epoch_end(self):
         self._logs[self._current_epoch]["metrics"][
-            "train_loss"] = self._train_loss.compute().cpu().numpy().item()
+            "train_loss"] = self._train_loss.compute().detach().cpu().numpy().item()
         torch.save(self.inner.model.state_dict(),
                    os.path.join(self.inner.weights_dir, f"{self._current_epoch}.pt"))
 
     def on_val_end(self):
         self._logs[self._current_epoch]["metrics"][
-            "val_loss"] = self._val_loss.compute().cpu().numpy().item()
+            "val_loss"] = self._val_loss.compute().detach().cpu().numpy().item()
         for name, m in self.inner.metrics.items():
             self._logs[self._current_epoch]["metrics"][
                 name] = m.compute().detach().cpu().numpy().tolist()
@@ -142,10 +143,13 @@ class TrainingOperator:
                 for batch in logger:
                     self.train_step(batch, logger)
             self.on_epoch_end()
-            self.on_eval_start()
-            self.inner.model.eval()
-            for batch in tqdm(iter(self.inner.val_data_loader),
-                              desc=f"evaluating: {self._current_epoch}"):
-                self.val_step(batch)
-            self.on_val_end()
+            self.evaluate_epoch()
             self._current_epoch += 1
+
+    def evaluate_epoch(self):
+        self.on_eval_start()
+        self.inner.model.eval()
+        for batch in tqdm(iter(self.inner.val_data_loader),
+                          desc=f"evaluating: {self._current_epoch}"):
+            self.val_step(batch)
+        self.on_val_end()

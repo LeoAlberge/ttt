@@ -28,7 +28,6 @@ def main():
     parser.add_argument("--logging",
                         default=r"INFO", required=False)
     parser.add_argument("--compiled", default="false", required=False)
-    parser.add_argument("--cuda", default="true", required=False)
     parser.add_argument("--liver-only", default="true", required=False)
 
     args = parser.parse_args()
@@ -68,8 +67,8 @@ def main():
                                               pin_memory=cuda, num_workers=4)
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs, pin_memory=cuda, num_workers=4)
     m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
-    if cuda:
-        m = m.cuda()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    m = m.to(device)
     if args.compiled.lower() == "true":
         m = torch.compile(m, mode="reduce-overhead")
 
@@ -79,17 +78,18 @@ def main():
         model=m,
         optimizer=optimizer,
         loss=CombinedSegmentationLoss(),
-        metrics={"mean_dice": MeanDiceScore(apply_argmax=True),
-                 "dices": SegmentationMultiDiceScores(apply_argmax=True)},
+        metrics={"mean_dice": MeanDiceScore(apply_argmax=True, device=device),
+                 "dices": SegmentationMultiDiceScores(apply_argmax=True, device=device)},
         train_data_loader=data_loader,
         val_data_loader=val_loader,
         nb_epochs=epoch,
         weights_dir=".",
         exp_dir=".",
-        cuda_enabled=cuda,
+        device=device,
         reload_weights=ReloadWeightsConfig(True)
     )
     t = TrainingOperator(params)
+    t.evaluate_epoch()
     t.fit()
 
 
