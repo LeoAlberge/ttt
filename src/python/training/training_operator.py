@@ -61,7 +61,7 @@ class TrainingOperator:
                 last_epoch = np.max(list(epoch_to_weights.keys()))
                 w_path = epoch_to_weights[last_epoch]
                 self.inner.model.load_state_dict(
-                    torch.load(w_path, map_location=self.inner.model.device))
+                    torch.load(w_path))
                 self._current_epoch = last_epoch + 1
                 self.__log.info(f"Loaded weights from epoch {last_epoch}: {w_path}")  # type: ignore
                 self.__log.info(f"Will start epoch: {self._current_epoch}")  # type: ignore
