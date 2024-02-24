@@ -33,6 +33,7 @@ class TrainingOperatorParams:
     weights_dir: str
     reload_weights: ReloadWeightsConfig
     device: torch.device
+    evaluate: bool
 
 
 @logged
@@ -143,7 +144,8 @@ class TrainingOperator:
                 for batch in logger:
                     self.train_step(batch, logger)
             self.on_epoch_end()
-            self.evaluate_epoch()
+            if self.inner.evaluate:
+                self.evaluate_epoch()
             self._current_epoch += 1
 
     def evaluate_epoch(self):

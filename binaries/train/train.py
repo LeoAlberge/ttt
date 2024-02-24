@@ -73,19 +73,21 @@ def main():
 
     logging.info(f"Number of params {count_parameters(m)}")
     optimizer = torch.optim.AdamW(m.parameters(),lr=1e-4)
+    # metrics = {"mean_dice": MeanDiceScore(apply_argmax=True, device=device),
+    #  "dices": SegmentationMultiDiceScores(apply_argmax=True, device=device)}
     params = TrainingOperatorParams(
         model=m,
         optimizer=optimizer,
         loss=CombinedSegmentationLoss(),
-        metrics={"mean_dice": MeanDiceScore(apply_argmax=True, device=device),
-                 "dices": SegmentationMultiDiceScores(apply_argmax=True, device=device)},
+        metrics={},
         train_data_loader=data_loader,
         val_data_loader=val_loader,
         nb_epochs=epoch,
         weights_dir=".",
         exp_dir=".",
         device=device,
-        reload_weights=ReloadWeightsConfig(True)
+        reload_weights=ReloadWeightsConfig(True),
+        evaluate=True
     )
     t = TrainingOperator(params)
     t.evaluate_epoch()
