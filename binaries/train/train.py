@@ -63,8 +63,8 @@ def main():
         f.write(json.dumps(val_set.indices))
 
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True,
-                                              pin_memory=cuda, num_workers=4)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs, pin_memory=cuda, num_workers=4)
+                                              pin_memory= torch.cuda.is_available(), num_workers=4)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs, pin_memory= torch.cuda.is_available(), num_workers=4)
     m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     m = m.to(device)
