@@ -1,7 +1,7 @@
 import abc
 from collections import OrderedDict
 from functools import partial
-from typing import Callable, List
+from typing import Callable, List, Mapping, Any
 
 import numpy as np
 import torch
@@ -170,14 +170,24 @@ class UnetRDecoder(nn.Module):
 
 class AbstractPretrainableModel(abc.ABC, nn.Module):
 
+    @abc.abstractmethod
+    def filter_not_pretrainable(self, pretrained_state_dict: Mapping[str, Any]) -> Mapping[
+        str, Any]:
+        raise NotImplementedError()
+
     def load_from_pretrained(self, pretrained_w_path: str):
         pretrained_state_dict = torch.load(pretrained_w_path)
         pretrained_state_dict = {k: v for k, v in pretrained_state_dict.items() if
                                  k in self.state_dict()}
+        pretrained_state_dict = self.filter_not_pretrainable(pretrained_state_dict)
         self.load_state_dict(pretrained_state_dict)
 
 
 class UnetR(AbstractPretrainableModel):
+    def filter_not_pretrainable(self, pretrained_state_dict: Mapping[str, Any]) -> Mapping[
+        str, Any]:
+        return {k: v for k, v in pretrained_state_dict.items() if "segmentation_head" not in k}
+
     def __init__(self, nb_classes: int = 1,
                  hidden_dim=768,
                  patch_size=16,
