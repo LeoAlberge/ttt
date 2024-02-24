@@ -4,6 +4,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Tuple, Dict
 
+import numpy as np
 import torch.optim
 from autologging import logged
 from torch import nn
@@ -50,14 +51,21 @@ class TrainingOperator:
             if os.path.isfile(self._log_path()):
                 with open(self._log_path()) as f:
                     self._logs = json.load(f)
-            weights_regex = re.compile("(\d+).pt")
+            weights_regex = re.compile("(\d+).pt")*
+            epoch_to_weights = {}
             for file in os.listdir(self.inner.weights_dir):
                 if regex_res := weights_regex.search(file):
-                    last_epoch = int(regex_res.group(1))
-                    w_path = os.path.join(self.inner.weights_dir, file)
-                    self.inner.model.load_state_dict(
-                        torch.load(w_path, map_location=self.inner.model.device))
-                    self._current_epoch = last_epoch + 1
+                    epoch = int(regex_res.group(1))
+                    epoch_to_weights[epoch] = os.path.join(self.inner.weights_dir, file)
+            if len(epoch_to_weights) > 0:
+                last_epoch= np.argmax(list(epoch_to_weights.keys()))
+                w_path =epoch_to_weights[last_epoch]
+                self.inner.model.load_state_dict(
+                    torch.load(w_path, map_location=self.inner.model.device))
+                self._current_epoch = last_epoch + 1
+                self.__log.info(f"Loaded weights from epoch {last_epoch}: {w_path}") # type: ignore
+                self.__log.info(f"Will start epoch: {self._current_epoch}") # type: ignore
+
 
     def _preprocess(self, batch: Tuple[torch.Tensor, torch.Tensor]):
         inputs, target = batch

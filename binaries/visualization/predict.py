@@ -14,7 +14,7 @@ def main():
     colors = {c: np.random.rand(3) for c in TOTAL_SEG_CLASS_ID_TO_LABELS.values()}
     sub_classes = TOTAL_SEG_LABELS_TO_CLASS_ID
     m = UnetR(nb_classes=2, mlp_dim=1536, normalization="batch_norm")
-    m.load_state_dict(torch.load('0.pt', map_location=torch.device('cpu')))
+    m.load_state_dict(torch.load('3.pt', map_location=torch.device('cpu')))
     m.eval()
     ds =H5Dataset("preprocessed_100.hdf5")
     for c, (x, y) in tqdm(enumerate(iter(ds))):
@@ -27,6 +27,12 @@ def main():
                 plt.figure()
                 plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
                 plt.imshow(seg_data[k, :, :], cmap="hot", interpolation="bilinear", alpha=0.3, vmin=0, vmax=1)
+                plt.colorbar()
+
+                plt.contour((y[0, :, :, :] == TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8),
+                            levels=[0.5], colors=["green"])
+                plt.contour(seg_data[k, :, :],
+                            levels=[0.5], colors=["red"])
                 plt.savefig(os.path.join(outdir, f"{k}.png"))
                 plt.close()
 
