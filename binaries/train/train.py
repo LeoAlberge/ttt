@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import sys
 
@@ -11,8 +12,9 @@ from src.python.models.unetr import UnetR, count_parameters
 from src.python.preprocessing.preprocessing import SegmentationOneHotEncoding
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
 from src.python.training.losses import CombinedSegmentationLoss
-from src.python.training.metrics import MeanDiceScore
-from src.python.training.training_operator import TrainingOperatorParams, TrainingOperator
+from src.python.training.metrics import MeanDiceScore, SegmentationMultiDiceScores
+from src.python.training.training_operator import TrainingOperatorParams, TrainingOperator, \
+    ReloadWeightsConfig
 
 
 def main():
@@ -57,6 +59,10 @@ def main():
 
     ds = H5Dataset(args.dataset, transform=ComposeTransform(transform_l))
     train_set, val_set = random_split(ds, [0.8, 0.2])
+    with open("train_indexes.json", "w") as f:
+        f.write(json.dumps(train_set.indices))
+    with open("val_indexes.json", "w") as f:
+        f.write(json.dumps(val_set.indices))
 
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True,
                                               pin_memory=cuda, num_workers=4)
@@ -73,12 +79,15 @@ def main():
         model=m,
         optimizer=optimizer,
         loss=CombinedSegmentationLoss(),
-        metrics={"mean_dice": MeanDiceScore()},
+        metrics={"mean_dice": MeanDiceScore(apply_argmax=True),
+                 "dices": SegmentationMultiDiceScores(apply_argmax=True)},
         train_data_loader=data_loader,
         val_data_loader=val_loader,
         nb_epochs=epoch,
         weights_dir=".",
-        cuda_enabled=cuda
+        exp_dir=".",
+        cuda_enabled=cuda,
+        reload_weights=ReloadWeightsConfig(True)
     )
     t = TrainingOperator(params)
     t.fit()
