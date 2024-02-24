@@ -87,10 +87,9 @@ def main():
         exp_dir=".",
         device=device,
         reload_weights=ReloadWeightsConfig(True),
-        evaluate=True
+        evaluate=False
     )
     t = TrainingOperator(params)
-    t.evaluate_epoch()
     t.fit()
 
 

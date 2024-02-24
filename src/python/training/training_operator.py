@@ -109,13 +109,13 @@ class TrainingOperator:
             self._val_loss.update(l)
             for m in self.inner.metrics.values():
                 m.update(y, outputs)
-        return l
 
     def on_epoch_start(self):
         self._logs.setdefault(self._current_epoch, {"metrics": {}})
         self._train_loss.reset()
 
     def on_eval_start(self):
+        self.inner.model.eval()
         self._val_loss.reset()
 
     def on_epoch_end(self):
@@ -150,7 +150,6 @@ class TrainingOperator:
 
     def evaluate_epoch(self):
         self.on_eval_start()
-        self.inner.model.eval()
         for batch in tqdm(iter(self.inner.val_data_loader),
                           desc=f"evaluating: {self._current_epoch}"):
             self.val_step(batch)
