@@ -51,7 +51,7 @@ class TrainingOperator:
             if os.path.isfile(self._log_path()):
                 with open(self._log_path()) as f:
                     self._logs = json.load(f)
-            weights_regex = re.compile("(\d+).pt")*
+            weights_regex = re.compile("(\d+).pt")
             epoch_to_weights = {}
             for file in os.listdir(self.inner.weights_dir):
                 if regex_res := weights_regex.search(file):
