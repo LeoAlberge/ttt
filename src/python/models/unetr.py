@@ -227,7 +227,7 @@ class UnetR(AbstractPretrainableModel):
         self.segmentation_head = nn.Sequential(
             ConvBlock(feature_sz * 2, feature_sz * 4, normalization=normalization),
             Conv3dNormActivation(feature_sz * 4, nb_classes, padding="same", kernel_size=1,
-                                 norm_layer=get_norm_layer(normalization),
+                                 norm_layer=None,
                                  activation_layer=None),
         )
         print("segmentation_head params:", count_parameters(self.segmentation_head))

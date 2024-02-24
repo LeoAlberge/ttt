@@ -50,4 +50,6 @@ class CombinedSegmentationLoss(_Loss):
         self._dice_loss = DiceSegmentationLoss(reduction=reduction)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
-        return self._ce.forward(input, target) + self._dice_loss(input, target)
+        ce = self._ce.forward(input, target)
+        dice =self._dice_loss(input, target)
+        return torch.add(ce, dice)

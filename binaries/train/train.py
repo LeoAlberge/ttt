@@ -12,7 +12,6 @@ from src.python.models.unetr import UnetR, count_parameters
 from src.python.preprocessing.preprocessing import SegmentationOneHotEncoding
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
 from src.python.training.losses import CombinedSegmentationLoss
-from src.python.training.metrics import MeanDiceScore, SegmentationMultiDiceScores
 from src.python.training.training_operator import TrainingOperatorParams, TrainingOperator, \
     ReloadWeightsConfig
 
@@ -20,7 +19,9 @@ from src.python.training.training_operator import TrainingOperatorParams, Traini
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset",
-                        default=r"preprocessed_100.hdf5", required=False)
+                        default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries"
+                                r"\visualization\preprocessed_100.hdf5",
+                        required=False)
     parser.add_argument("--epochs",
                         default=r"2", required=False)
     parser.add_argument("--bs",
@@ -28,7 +29,8 @@ def main():
     parser.add_argument("--logging",
                         default=r"INFO", required=False)
     parser.add_argument("--compiled", default="false", required=False)
-    parser.add_argument("--liver-only", default="true", required=False)
+    parser.add_argument("--liver-only", default="false", required=False)
+    parser.add_argument("--num-workers", default="4", required=False)
 
     args = parser.parse_args()
 
@@ -37,7 +39,9 @@ def main():
     elif args.logging == "INFO":
         logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
+    num_workers = int(args.num_workers)
     epoch = int(args.epochs)
+
     bs = int(args.bs)
     liver_only = args.liver_only.lower() == "true"
     num_classes = 2 if liver_only else 118
@@ -63,8 +67,11 @@ def main():
         f.write(json.dumps(val_set.indices))
 
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True,
-                                              pin_memory= torch.cuda.is_available(), num_workers=4)
-    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs, pin_memory= torch.cuda.is_available(), num_workers=4)
+                                              pin_memory=torch.cuda.is_available(),
+                                              num_workers=num_workers)
+    val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs,
+                                             pin_memory=torch.cuda.is_available(),
+                                             num_workers=num_workers)
     m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     m = m.to(device)
@@ -72,7 +79,7 @@ def main():
         m = torch.compile(m, mode="reduce-overhead")
 
     logging.info(f"Number of params {count_parameters(m)}")
-    optimizer = torch.optim.AdamW(m.parameters(),lr=1e-4)
+    optimizer = torch.optim.AdamW(m.parameters(), lr=1e-4)
     # metrics = {"mean_dice": MeanDiceScore(apply_argmax=True, device=device),
     #  "dices": SegmentationMultiDiceScores(apply_argmax=True, device=device)}
     params = TrainingOperatorParams(

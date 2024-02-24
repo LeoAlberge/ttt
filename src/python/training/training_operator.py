@@ -66,7 +66,8 @@ class TrainingOperator:
                 if self.inner.reload_weights.mode == "pretrained":
                     self.inner.model.load_from_pretrained(w_path)
                 elif self.inner.reload_weights.mode == "reload_last":
-                    self.inner.model.load_state_dict(torch.load(w_path))
+                    self.inner.model.load_state_dict(
+                        torch.load(w_path, map_location=self.inner.device))
                 else:
                     raise NotImplementedError(f"{self.inner.reload_weights.mode} does not exist")
                 self._current_epoch = last_epoch + 1

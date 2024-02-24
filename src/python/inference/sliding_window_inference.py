@@ -24,7 +24,6 @@ class SlidingWindowInference:
     @timeit("predict patch")
     def _predict(self, patch):
         patch = torch.tensor(patch[np.newaxis, np.newaxis, :])
-        print(patch.shape)
         return torch.nn.functional.softmax(self._model.forward(patch),
                                            dim=1).detach().cpu().numpy()[0, :]
 
@@ -72,6 +71,7 @@ class SlidingWindowInference:
                     count_volume[z:z + patch_size[0], y:y + patch_size[1],
                     x:x + patch_size[2]] += 1
                     progress_bar.update(1)
+
 
         # Calculate mean predictions
         output_volume /= count_volume[np.newaxis, ...]
