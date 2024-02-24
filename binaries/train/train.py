@@ -93,7 +93,7 @@ def main():
         weights_dir=".",
         exp_dir=".",
         device=device,
-        reload_weights=ReloadWeightsConfig(True),
+        reload_weights=ReloadWeightsConfig(True, mode="pretrained"),
         evaluate=False
     )
     t = TrainingOperator(params)
