@@ -39,7 +39,6 @@ def main():
 
     epoch = int(args.epochs)
     bs = int(args.bs)
-    cuda = args.cuda.lower() == "true"
     liver_only = args.liver_only.lower() == "true"
     num_classes = 2 if liver_only else 118
     if liver_only:
