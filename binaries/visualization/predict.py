@@ -29,7 +29,7 @@ def main():
                 plt.imshow(seg_data[k, :, :], cmap="hot", interpolation="bilinear", alpha=0.3, vmin=0, vmax=1)
                 plt.colorbar()
 
-                plt.contour((y[0, :, :, :] == TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8),
+                plt.contour((y[0, k, :, :] == TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8),
                             levels=[0.5], colors=["green"])
                 plt.contour(seg_data[k, :, :],
                             levels=[0.5], colors=["red"])

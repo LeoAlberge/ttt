@@ -57,6 +57,7 @@ class TrainingOperator:
                 if regex_res := weights_regex.search(file):
                     epoch = int(regex_res.group(1))
                     epoch_to_weights[epoch] = os.path.join(self.inner.weights_dir, file)
+            print(epoch_to_weights)
             if len(epoch_to_weights) > 0:
                 last_epoch= np.argmax(list(epoch_to_weights.keys()))
                 w_path =epoch_to_weights[last_epoch]
