@@ -22,7 +22,7 @@ def main():
         subclasses = json.loads(f.read())
         num_classes = len(subclasses) + 1
     m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
-    m.load_state_dict(torch.load('8.pt', map_location=torch.device('cpu')))
+    m.load_state_dict(torch.load('9.pt', map_location=torch.device('cpu')))
     swi = SlidingWindowInference(m)
 
     ds = TotalSegmentatorDataSet(
@@ -30,11 +30,11 @@ def main():
         target_spacing=(2, 2, 2),
         sub_classes=subclasses,
         transform=VolumeNormalization())
-    colors = ["red", "orange", "yellow", "blue", "purple","rose", "green"]
+    colors = ["red", "orange", "yellow", "blue", "purple","cyan", "green"]
     for c, (vol_data, y) in tqdm(enumerate(iter(ds))):
 
         if y.sum() > 0:
-            pred = swi.run(vol_data, step_size=(96,96,96), num_classes=num_classes)
+            pred = swi.run(vol_data, step_size=(70,70,70), num_classes=num_classes)
 
 
             outdir = f"pred/{c}"
@@ -51,9 +51,9 @@ def main():
                 # plt.contour(
                 #     (y[k, :, :] == 1).astype(np.uint8),
                 #     levels=[0.5], colors=["green"])
-                for c, c_id in zip(colors, subclasses.values()):
+                for color, c_id in zip(colors, subclasses.values()):
                     plt.contour((pred[ k, :, :]==c_id).astype(np.uint8),
-                                levels=[0.5], colors=[c])
+                                levels=[0.5], colors=[color])
                 plt.savefig(os.path.join(outdir, f"{k}.png"))
                 plt.close()
 

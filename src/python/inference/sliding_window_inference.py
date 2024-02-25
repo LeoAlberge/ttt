@@ -26,9 +26,9 @@ class SlidingWindowInference:
     @timeit("predict patch")
     def _predict(self, patch):
         patch = torch.tensor(patch[np.newaxis, np.newaxis, :])
-        return np.argmax(self._model.forward(patch).detach().cpu().numpy()[0, :], axis=0)
-        # return torch.nn.functional.softmax(self._model.forward(patch),
-        #                                    dim=1).detach().cpu().numpy()[0, :]
+        # return np.argmax(self._model.forward(patch).detach().cpu().numpy()[0, :], axis=0)
+        return torch.nn.functional.softmax(self._model.forward(patch),
+                                           dim=1).detach().cpu().numpy()[0, :]
 
 
     @timeit("SlidingWindowInference.run")
@@ -47,8 +47,8 @@ class SlidingWindowInference:
         d, h, w = input_volume_padded.shape
         input_shape = input_volume_padded.shape
 
-        output_volume = np.zeros((d, h, w), dtype=np.uint8)
-        # count_volume = np.zeros(input_shape, dtype=np.int32)
+        output_volume = np.zeros((num_classes, d, h, w), dtype=np.float16)
+        count_volume = np.zeros((num_classes, d, h, w), dtype=np.uint8)
         progress_bar = tqdm(desc="predicting over batches",
                             total=((input_shape[0] - patch_size[0]) // step_size[0] + 1) * (
                                     (input_shape[1] - patch_size[1]) // step_size[1] + 1) * (
@@ -72,16 +72,16 @@ class SlidingWindowInference:
                     predicted_patch = self._predict(patch)
 
                     # Aggregate predictions
-                    output_volume[z:z + patch_size[0], y:y + patch_size[1],
-                    x:x + patch_size[2]] += predicted_patch.astype(np.uint8)
-                    # count_volume[:, z:z + patch_size[0], y:y + patch_size[1],
-                    # x:x + patch_size[2]] += 1
+                    output_volume[:, z:z + patch_size[0], y:y + patch_size[1],
+                    x:x + patch_size[2]] += predicted_patch
+                    count_volume[:, z:z + patch_size[0], y:y + patch_size[1],
+                    x:x + patch_size[2]] += 1
                     progress_bar.update(1)
 
         # Calculate mean predictions
-        # output_volume /= count_volume
-        # class_mask = (count_volume > 0).astype(np.float32)
-        # output_volume *= class_mask
-        # output_volume = np.argmax(output_volume,0)
+        output_volume /= count_volume
+        class_mask = (count_volume > 0).astype(np.float16)
+        output_volume *= class_mask
+        output_volume = np.argmax(output_volume,0)
         res = unpad(output_volume, pad_width)
         return res

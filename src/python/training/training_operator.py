@@ -62,7 +62,7 @@ class TrainingOperator:
                     epoch = int(regex_res.group(1))
                     epoch_to_weights[epoch] = os.path.join(self.inner.weights_dir, file)
             if len(epoch_to_weights) > 0:
-                last_epoch = np.max(list(epoch_to_weights.keys()))
+                last_epoch = np.max(list(epoch_to_weights.keys())).item()
                 w_path = epoch_to_weights[last_epoch]
                 if self.inner.reload_weights.mode == "pretrained":
                     self.inner.model.load_from_pretrained(w_path, map_location=self.inner.device)
