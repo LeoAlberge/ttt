@@ -65,7 +65,7 @@ class TrainingOperator:
                 last_epoch = np.max(list(epoch_to_weights.keys()))
                 w_path = epoch_to_weights[last_epoch]
                 if self.inner.reload_weights.mode == "pretrained":
-                    self.inner.model.load_from_pretrained(w_path)
+                    self.inner.model.load_from_pretrained(w_path, map_location=self.inner.device)
                 elif self.inner.reload_weights.mode == "reload_last":
                     self.inner.model.load_state_dict(
                         torch.load(w_path, map_location=self.inner.device))

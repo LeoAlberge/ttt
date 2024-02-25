@@ -1,4 +1,5 @@
 import torch
+import torchvision
 from torch import Tensor
 from torch.nn.modules.loss import _Loss
 
@@ -51,5 +52,13 @@ class CombinedSegmentationLoss(_Loss):
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         ce = self._ce.forward(input, target)
-        dice =self._dice_loss(input, target)
+        dice = self._dice_loss(input, target)
         return torch.add(ce, dice)
+
+
+class FocalLoss(_Loss):
+    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
+        super().__init__(size_average, reduce, reduction)
+
+    def forward(self, input: Tensor, target: Tensor) -> Tensor:
+        return torchvision.ops.sigmoid_focal_loss(input, target, reduction=self.reduction)

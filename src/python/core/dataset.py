@@ -212,3 +212,84 @@ class H5Dataset(Dataset):
         if self._transform is not None:
             return self._transform(inputs, targets)
         return inputs, targets
+
+
+BTCV_CLASS_ID_TO_LABELS = {
+    1: "spleen",
+    2: "right kidney",
+    3: "left kidney",
+    4: "gallbladder",
+    5: "esophagus",
+    6: "liver",
+    7: "stomach",
+    8: "aorta",
+    9: "inferior vena cava",
+    10: "portal vein and splenic vein",
+    11: "pancreas",
+    12: "right adrenal gland",
+    13: "left adrenal gland",
+    14: "duodenum",
+}
+
+BTCV_LABELS_TO_CLASS_ID = {v: k for k, v in BTCV_CLASS_ID_TO_LABELS.items()}
+
+
+# TODO: Maybe re-factorisable with the total seg dataset
+class BTCVDataset(Dataset):
+    def __init__(self,
+                 data_root_dir: str,
+                 reshape_to_identity: bool = True,
+                 target_spacing: Optional[Tuple[float, float, float]] = (1, 1, 1),
+                 sub_classes: Dict[str, int] = None,
+                 transform: Optional[Callable] = None,
+                 size: Optional[int] = None):
+        super().__init__()
+        self._transform = transform
+        self._data_root_dir = data_root_dir
+        self._indexes = sorted([x for x in os.listdir(data_root_dir) if
+                                os.path.isdir(os.path.join(self._data_root_dir, x))])
+
+        self._reshape_to_identity = reshape_to_identity
+        self._target_spacing = target_spacing
+
+        self._sub_classes = sub_classes
+        self._size = size
+
+    def __len__(self):
+        return len(self._indexes) if self._size is None else self._size
+
+    @timeit("BTCVDataset.get_item")
+    def __getitem__(self, index) -> Tuple[Any, Any]:
+        if index == len(self):
+            raise StopIteration
+        index_name = self._indexes[index]
+        try:
+            dir = os.path.join(self._data_root_dir, index_name)
+            ct = read_nii(os.path.join(dir, "ct.nii.gz"))
+            seg = TTTVolume(np.zeros_like(ct.data,
+                                          dtype=np.uint8),
+                            spacing=deepcopy(ct.spacing),
+                            origin_lps=deepcopy(ct.origin_lps),
+                            matrix_ijk_2_lps=deepcopy(ct.matrix_ijk_2_lps))
+            classes = self._sub_classes if self._sub_classes is not None else (
+                TOTAL_SEG_LABELS_TO_CLASS_ID)
+            for c, class_id in classes.items():
+                seg_file = os.path.join(dir, "segmentations", f"{c}.nii.gz")
+                if os.path.isfile(os.path.join(dir, "segmentations", f"{c}.nii.gz")):
+                    tmp_seg = read_nii(seg_file)
+                    seg.data[np.where(tmp_seg.data == 1)] = class_id
+
+            if self._reshape_to_identity:
+                ct = permute_to_identity_matrix(ct)
+                seg = permute_to_identity_matrix(seg)
+            if self._target_spacing is not None:
+                ct = interpolate_to_target_spacing(ct, np.array(self._target_spacing))
+                seg = interpolate_to_target_spacing(seg, np.array(self._target_spacing),
+                                                    method="nearest_neighbor")
+
+            if self._transform is not None:
+                return self._transform(ct.data, seg.data)
+            return ct.data, seg.data
+        except Exception as e:
+            self.__log.error(f"error:{e} for index: {index_name}")
+            return None, None

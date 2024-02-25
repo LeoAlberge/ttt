@@ -1,4 +1,5 @@
 import abc
+import logging
 from collections import OrderedDict
 from functools import partial
 from typing import Callable, List, Mapping, Any
@@ -175,11 +176,12 @@ class AbstractPretrainableModel(abc.ABC, nn.Module):
         str, Any]:
         raise NotImplementedError()
 
-    def load_from_pretrained(self, pretrained_w_path: str):
-        pretrained_state_dict = torch.load(pretrained_w_path)
+    def load_from_pretrained(self, pretrained_w_path: str, map_location):
+        pretrained_state_dict = torch.load(pretrained_w_path, map_location=map_location)
         pretrained_state_dict = {k: v for k, v in pretrained_state_dict.items() if
                                  k in self.state_dict()}
         pretrained_state_dict = self.filter_not_pretrainable(pretrained_state_dict)
+        logging.info(f"Loaded {len(pretrained_state_dict)} layers")
         self.load_state_dict(pretrained_state_dict, strict=False)
 
 

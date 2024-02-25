@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import sys
+from typing import Dict, Tuple
 
 import numpy as np
 import torch
@@ -29,7 +30,7 @@ def main():
     parser.add_argument("--logging",
                         default=r"INFO", required=False)
     parser.add_argument("--compiled", default="false", required=False)
-    parser.add_argument("--liver-only", default="false", required=False)
+    parser.add_argument("--subclasses", default="subclasses.json", required=False)
     parser.add_argument("--num-workers", default="4", required=False)
     parser.add_argument("--reload-mode", default="pretrained", required=False)
 
@@ -44,11 +45,22 @@ def main():
     epoch = int(args.epochs)
 
     bs = int(args.bs)
-    liver_only = args.liver_only.lower() == "true"
-    num_classes = 2 if liver_only else 118
-    if liver_only:
+    if args.subclasses:
+        with open(args.subclasses) as f:
+            subclasses = json.loads(f.read())
+            num_classes = len(subclasses)+1
+    else:
+        subclasses = None
+        num_classes = 118
+
+    def map_new_classes(y, subclasses: Dict[str,int])-> np.uint8:
+        res = np.zeros_like(y, dtype=np.uint8)
+        for class_label, new_class_id in subclasses.items():
+            res[np.where(y == TOTAL_SEG_LABELS_TO_CLASS_ID[class_label])] = new_class_id
+        return res
+    if subclasses:
         transform_l = [
-            lambda x, y: (x, (y == TOTAL_SEG_LABELS_TO_CLASS_ID["liver"]).astype(np.uint8)),
+            lambda x, y: (x, map_new_classes(y, subclasses)),
             ToTensor(torch.float32, torch.uint8),
             SegmentationOneHotEncoding(num_classes),
             ToTensor(torch.float32, torch.float32),
@@ -85,7 +97,7 @@ def main():
     params = TrainingOperatorParams(
         model=m,
         optimizer=optimizer,
-        loss=CombinedSegmentationLoss(),
+        loss=torch.nn.CrossEntropyLoss(),
         metrics={},
         train_data_loader=data_loader,
         val_data_loader=val_loader,
