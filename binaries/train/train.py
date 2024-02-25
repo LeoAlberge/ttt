@@ -5,7 +5,7 @@ import sys
 
 import numpy as np
 import torch
-from torch.utils.data import random_split
+from torch.utils.data import random_split, Subset
 
 from src.python.core.dataset import H5Dataset, TOTAL_SEG_LABELS_TO_CLASS_ID
 from src.python.models.unetr import UnetR, count_parameters
@@ -31,6 +31,7 @@ def main():
     parser.add_argument("--compiled", default="false", required=False)
     parser.add_argument("--liver-only", default="false", required=False)
     parser.add_argument("--num-workers", default="4", required=False)
+    parser.add_argument("--reload-mode", default="pretrained", required=False)
 
     args = parser.parse_args()
 
@@ -60,11 +61,10 @@ def main():
         ]
 
     ds = H5Dataset(args.dataset, transform=ComposeTransform(transform_l))
-    train_set, val_set = random_split(ds, [0.8, 0.2])
-    with open("train_indexes.json", "w") as f:
-        f.write(json.dumps(train_set.indices))
-    with open("val_indexes.json", "w") as f:
-        f.write(json.dumps(val_set.indices))
+    with open("train_indexes.json", "r") as f:
+        train_set = Subset(ds, indices=json.loads(f.read()))
+    with open("val_indexes.json", "r") as f:
+        val_set = Subset(ds, indices=json.loads(f.read()))
 
     data_loader = torch.utils.data.DataLoader(train_set, batch_size=bs, shuffle=True,
                                               pin_memory=torch.cuda.is_available(),
@@ -93,8 +93,9 @@ def main():
         weights_dir=".",
         exp_dir=".",
         device=device,
-        reload_weights=ReloadWeightsConfig(True, mode="pretrained"),
-        evaluate=False
+        reload_weights=ReloadWeightsConfig(True, mode=args.reload_mode),
+        evaluate=False,
+        nb_steps_per_epoch=1000
     )
     t = TrainingOperator(params)
     t.fit()

@@ -2,7 +2,7 @@ import json
 import os.path
 import re
 from dataclasses import dataclass
-from typing import Any, Tuple, Dict
+from typing import Any, Tuple, Dict, Optional
 
 import numpy as np
 import torch.optim
@@ -34,6 +34,7 @@ class TrainingOperatorParams:
     reload_weights: ReloadWeightsConfig
     device: torch.device
     evaluate: bool
+    nb_steps_per_epoch: Optional[int] = None
 
 
 @logged
@@ -140,10 +141,15 @@ class TrainingOperator:
         for i in range(self.inner.nb_epochs):
             self.on_epoch_start()
             self.inner.model.train()
+            total = self.inner.nb_steps_per_epoch if (self.inner.nb_steps_per_epoch
+                                                      is not None) else len(
+                self.inner.train_data_loader)
             with tqdm(iter(self.inner.train_data_loader),
-                      desc=f"train epoch: {self._current_epoch}") as logger:
+                      desc=f"train epoch: {self._current_epoch}", total=total) as logger:
                 for batch in logger:
                     self.train_step(batch, logger)
+                    if logger.n == total:
+                        break
             self.on_epoch_end()
             if self.inner.evaluate:
                 self.evaluate_epoch()
