@@ -33,6 +33,8 @@ def main():
     parser.add_argument("--subclasses", default="subclasses.json", required=False)
     parser.add_argument("--num-workers", default="4", required=False)
     parser.add_argument("--reload-mode", default="pretrained", required=False)
+    parser.add_argument("--evaluate", default="false", required=False)
+    parser.add_argument("--steps-per-epoch", default=None, required=False)
 
     args = parser.parse_args()
 
@@ -41,9 +43,9 @@ def main():
     elif args.logging == "INFO":
         logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
+    evaluate = True if args.evaluate.lower() == "true" else False
     num_workers = int(args.num_workers)
     epoch = int(args.epochs)
-
     bs = int(args.bs)
     if args.subclasses:
         with open(args.subclasses) as f:
@@ -106,8 +108,8 @@ def main():
         exp_dir=".",
         device=device,
         reload_weights=ReloadWeightsConfig(True, mode=args.reload_mode),
-        evaluate=False,
-        nb_steps_per_epoch=1000
+        evaluate=evaluate,
+        nb_steps_per_epoch=args.steps_per_epoch
     )
     t = TrainingOperator(params)
     t.fit()

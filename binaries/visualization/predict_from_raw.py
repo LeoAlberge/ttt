@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -16,18 +17,20 @@ from src.python.preprocessing.preprocessing import VolumeNormalization
 
 def main():
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    num_classes = 118
+
+    with open("subclasses.json") as f:
+        subclasses = json.loads(f.read())
+        num_classes = len(subclasses) + 1
     m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
-    m.load_state_dict(torch.load('6.pt', map_location=torch.device('cpu')))
+    m.load_state_dict(torch.load('8.pt', map_location=torch.device('cpu')))
     swi = SlidingWindowInference(m)
 
     ds = TotalSegmentatorDataSet(
         r"C:\Users\LeoAlberge\work\personnal\data\Totalsegmentator_dataset_small_v201",
         target_spacing=(2, 2, 2),
-        sub_classes={"liver": 1},
+        sub_classes=subclasses,
         transform=VolumeNormalization())
-    subclasses_to_plot = ["liver", "kidney_right", "kidney_left", "aorta"]
-    colors = ["red", "orange", "yellow", "blue" ]
+    colors = ["red", "orange", "yellow", "blue", "purple","rose", "green"]
     for c, (vol_data, y) in tqdm(enumerate(iter(ds))):
 
         if y.sum() > 0:
@@ -41,15 +44,15 @@ def main():
             for k in range(vol_data.shape[0]):
                 plt.figure()
                 plt.imshow(vol_data[k, :, :], cmap="gray", interpolation="bilinear")
-                plt.imshow(pred[ k, :, :], cmap="hot", interpolation="bilinear", alpha=0.3,
-                           vmin=1, vmax=118)
+                # plt.imshow(pred[ k, :, :], cmap="hot", interpolation="bilinear", alpha=0.3,
+                #            vmin=1, vmax=118)
                 plt.colorbar()
 
-                plt.contour(
-                    (y[k, :, :] == 1).astype(np.uint8),
-                    levels=[0.5], colors=["green"])
-                for c, class_to_plot in zip(colors, subclasses_to_plot):
-                    plt.contour((pred[ k, :, :]==TOTAL_SEG_LABELS_TO_CLASS_ID[class_to_plot]).astype(np.uint8),
+                # plt.contour(
+                #     (y[k, :, :] == 1).astype(np.uint8),
+                #     levels=[0.5], colors=["green"])
+                for c, c_id in zip(colors, subclasses.values()):
+                    plt.contour((pred[ k, :, :]==c_id).astype(np.uint8),
                                 levels=[0.5], colors=[c])
                 plt.savefig(os.path.join(outdir, f"{k}.png"))
                 plt.close()
