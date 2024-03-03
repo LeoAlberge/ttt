@@ -87,7 +87,7 @@ def main():
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs,
                                              pin_memory=torch.cuda.is_available(),
                                              num_workers=num_workers)
-    m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="lbatch_norm")
+    m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     m = m.to(device)
     if args.compiled.lower() == "true":
