@@ -101,7 +101,7 @@ def main():
         model=m,
         optimizer=optimizer,
         loss=CombinedSegmentationLoss(),
-        metrics={"dices": SegmentationMultiDiceScores()},
+        metrics={"dices": SegmentationMultiDiceScores(device=device)},
         train_data_loader=data_loader,
         val_data_loader=val_loader,
         nb_epochs=epoch,
