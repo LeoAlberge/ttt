@@ -94,7 +94,7 @@ def main():
         device=device,
     )
     t = ExperimentEvaluator(params)
-    t.fit()
+    t.evaluate()
 
 
 if __name__ == '__main__':
