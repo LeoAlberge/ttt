@@ -1,5 +1,6 @@
 import abc
 import logging
+import sys
 from collections import OrderedDict
 from functools import partial
 from typing import Callable, List, Mapping, Any
@@ -203,7 +204,7 @@ class UnetR(AbstractPretrainableModel):
         self.input_dim = input_dim
 
         self.projection_module = nn.Sequential(
-            Conv3dNormActivation(1, hidden_dim, kernel_size=(3, 3, 3),
+            Conv3dNormActivation(1, hidden_dim, kernel_size=(patch_size, patch_size, patch_size),
                                  activation_layer=None, stride=self.patch_size,
                                  norm_layer=get_norm_layer(normalization)),
         )
@@ -268,6 +269,7 @@ class UnetR(AbstractPretrainableModel):
 if __name__ == '__main__':
     print(torch.cuda.is_available())
     print(torch.version.cuda)
+    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
     t = torch.tensor(np.zeros(shape=(1, 1, 96, 96, 96), dtype=np.float32))
     m = UnetR(nb_classes=16, feature_sz=16, mlp_dim=1536, normalization="instance")
     r = m.forward(t)
