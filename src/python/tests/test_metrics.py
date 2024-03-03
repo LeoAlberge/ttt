@@ -55,3 +55,16 @@ class MetricsTestCase(unittest.TestCase):
         mdc.update(m1, m2)
         m = mdc.compute().numpy()
         np.testing.assert_almost_equal(m, [1, 0])
+    def test_dice_multi_cast_to_list_with_last_batch(self):
+        m1 = np.ones((4, 2, 10, 10, 10))
+        m1[:, 1, :, :, :] = -1
+        m1 = torch.tensor(m1)
+        m2 = torch.tensor(np.ones((4, 2, 10, 10, 10)))
+        mdc = SegmentationMultiDiceScores(apply_argmax=True, apply_softmax=False)
+        mdc.update(m1, m2)
+        m1 = torch.tensor(np.ones((2, 2, 10, 10, 10)))
+        m2 = torch.tensor(np.ones((2, 2, 10, 10, 10)))
+        mdc.update(m1, m2)
+
+        m = mdc.compute().numpy().tolist()
+        np.testing.assert_almost_equal(m, [1, 0])

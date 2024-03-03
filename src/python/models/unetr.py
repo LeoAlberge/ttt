@@ -207,10 +207,10 @@ class UnetR(AbstractPretrainableModel):
                                  activation_layer=None, stride=self.patch_size,
                                  norm_layer=get_norm_layer(normalization)),
         )
-        print("projection_module params:", count_parameters(self.projection_module))
+        logging.info(f"projection_module params: {count_parameters(self.projection_module)}")
 
         self.input_conv_block = ConvBlock(1, feature_sz)
-        print("input_conv_block params:", count_parameters(self.input_conv_block))
+        logging.info(f"input_conv_block params: {count_parameters(self.input_conv_block)}" )
 
         length = (input_dim // patch_size) ** 3
         self.encoder = UnetREncoder(seq_length=length,
@@ -222,9 +222,9 @@ class UnetR(AbstractPretrainableModel):
                                     attention_dropout=0,
                                     )
 
-        print("encoder params:", count_parameters(self.encoder))
+        logging.info(f"encoder params: {count_parameters(self.encoder)}")
         self.decoder = UnetRDecoder(hidden_dim, feature_sz=feature_sz, normalization=normalization)
-        print("decoder params:", count_parameters(self.decoder))
+        logging.info(f"decoder params: {count_parameters(self.decoder)}")
 
         self.segmentation_head = nn.Sequential(
             ConvBlock(feature_sz * 2, feature_sz * 4, normalization=normalization),
@@ -232,7 +232,7 @@ class UnetR(AbstractPretrainableModel):
                                  norm_layer=None,
                                  activation_layer=None),
         )
-        print("segmentation_head params:", count_parameters(self.segmentation_head))
+        logging.info(f"segmentation_head params: {count_parameters(self.segmentation_head)}")
 
     def project_input(self, input: torch.Tensor):
         n, c, d, h, w = input.shape

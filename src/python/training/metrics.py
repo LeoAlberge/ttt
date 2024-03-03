@@ -25,7 +25,7 @@ class AbstractSegmentationMultiMetrics(Metric[torch.Tensor]):
         return inputs
 
     def compute(self: TSelf) -> TComputeReturn:
-        return torch.mean(torch.cat(self.tmp, -1), dim=0)
+        return torch.mean(torch.cat(self.tmp, 0), dim=0)
 
 
 class SegmentationMultiDiceScores(AbstractSegmentationMultiMetrics):
