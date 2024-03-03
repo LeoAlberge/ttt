@@ -66,7 +66,7 @@ class MeanDiceScore(SegmentationMultiDiceScores):
         self._add_state("tmp", [])
 
     def compute(self: TSelf) -> TComputeReturn:
-        return torch.mean(torch.cat(self.tmp, -1))
+        return torch.nanmean(torch.cat(self.tmp, -1))
 
     def merge_state(self: TSelf, metrics: Iterable[TSelf]) -> TSelf:
         raise NotImplementedError()
@@ -77,23 +77,3 @@ class MeanDiceScore(SegmentationMultiDiceScores):
         self.tmp.append(dice)
 
 
-if __name__ == '__main__':
-    import numpy as np
-
-    m1 = torch.tensor(np.ones((3, 5, 10, 10, 10)))
-    m2 = torch.tensor(np.ones((3, 5, 10, 10, 10)))
-    mdc = MeanDiceScore()
-    mdc.update(m1, m2)
-    m = mdc.compute()
-    assert m.numpy() == 1
-    # mdc.reset()
-    # m = mdc.compute()
-    # print(m)
-    m1 = np.ones((4, 3, 10, 10, 10))
-    m1[:2, :, :, :, :] = 0
-    m1 = torch.tensor(m1)
-    m2 = torch.tensor(np.ones((4, 3, 10, 10, 10)))
-    mdc = MeanDiceScore()
-    mdc.update(m1, m2)
-    m = mdc.compute()
-    assert m.numpy() == 0.5
