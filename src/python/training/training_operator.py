@@ -77,7 +77,6 @@ class TrainingOperator:
 
     def _preprocess(self, batch: Tuple[torch.Tensor, torch.Tensor]):
         inputs, target = batch
-
         inputs = inputs.to(self.inner.device)
         target = target.to(self.inner.device)
         return inputs, target
