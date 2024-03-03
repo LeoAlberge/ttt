@@ -10,10 +10,12 @@ class DiceSegmentationLoss(_Loss):
                  apply_softmax: bool = True,
                  size_average=None,
                  reduce=None,
-                 reduction: str = 'mean') -> None:
+                 reduction: str = 'mean',
+                 eps: float =  1e-5) -> None:
         super().__init__(size_average, reduce, reduction)
         self._apply_softmax = apply_softmax
         self._ignore_background = ignore_background
+        self._eps = eps
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         """
@@ -32,9 +34,9 @@ class DiceSegmentationLoss(_Loss):
             input = input[:, 1:, :, :, :]
             target = target[:, 1:, :, :, :]
 
-        num = torch.mul(torch.mul(input, target).sum(dim=[2, 3, 4]), 2)
+        num = torch.mul(torch.mul(input, target).sum(dim=[2, 3, 4]), 2)+self._eps
         denum = torch.mul(input, input).sum(dim=[2, 3, 4]) + torch.mul(target, target).sum(
-            dim=[2, 3, 4])
+            dim=[2, 3, 4])+self._eps
         dice = torch.mean(torch.divide(num, denum), dim=1)
         loss = torch.sub(1, dice)
         if self.reduction == "mean":

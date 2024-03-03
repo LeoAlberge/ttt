@@ -87,7 +87,7 @@ def main():
     logging.info(f"Number of params {count_parameters(m)}")
     params = ExperimentEvaluationParams(
         model=m,
-        loss=CombinedSegmentationLoss(),
+        loss=torch.nn.CrossEntropyLoss(),
         metrics={"dices": SegmentationMultiDiceScores(device=device)},
         val_data_loader=val_loader,
         weights_dir=".",

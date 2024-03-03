@@ -51,6 +51,9 @@ class SegmentationMultiDiceScores(AbstractSegmentationMultiMetrics):
         input = self._pre_process_inputs(input)
         self.tmp.append(self._dices(input, target))
 
+    def compute(self: TSelf) -> TComputeReturn:
+        return torch.nanmean(torch.cat(self.tmp, 0), dim=0)
+
 
 class MeanDiceScore(SegmentationMultiDiceScores):
     def __init__(self,
