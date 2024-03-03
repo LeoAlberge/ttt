@@ -11,7 +11,7 @@ class DiceSegmentationLoss(_Loss):
                  size_average=None,
                  reduce=None,
                  reduction: str = 'mean',
-                 eps: float =  1e-5) -> None:
+                 eps: float = 1e-5) -> None:
         super().__init__(size_average, reduce, reduction)
         self._apply_softmax = apply_softmax
         self._ignore_background = ignore_background
@@ -34,9 +34,9 @@ class DiceSegmentationLoss(_Loss):
             input = input[:, 1:, :, :, :]
             target = target[:, 1:, :, :, :]
 
-        num = torch.mul(torch.mul(input, target).sum(dim=[2, 3, 4]), 2)+self._eps
+        num = torch.mul(torch.mul(input, target).sum(dim=[2, 3, 4]), 2) + self._eps
         denum = torch.mul(input, input).sum(dim=[2, 3, 4]) + torch.mul(target, target).sum(
-            dim=[2, 3, 4])+self._eps
+            dim=[2, 3, 4]) + self._eps
         dice = torch.mean(torch.divide(num, denum), dim=1)
         loss = torch.sub(1, dice)
         if self.reduction == "mean":
@@ -47,10 +47,12 @@ class DiceSegmentationLoss(_Loss):
 
 
 class CombinedSegmentationLoss(_Loss):
-    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean') -> None:
+    def __init__(self, size_average=None, reduce=None, reduction: str = 'mean',
+                 ignore_dice_background: bool = True) -> None:
         super().__init__(size_average, reduce, reduction)
         self._ce = torch.nn.CrossEntropyLoss(size_average=size_average, reduction=reduction)
-        self._dice_loss = DiceSegmentationLoss(reduction=reduction)
+        self._dice_loss = DiceSegmentationLoss(reduction=reduction,
+                                               ignore_background=ignore_dice_background)
 
     def forward(self, input: Tensor, target: Tensor) -> Tensor:
         ce = self._ce.forward(input, target)
