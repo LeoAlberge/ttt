@@ -9,6 +9,9 @@ __pycache__/
 *.hdf5
 *.pt
 *.json
+*.nii
+*.nii.gz
+*.crdownload
 
 # Distribution / packaging
 .Python

@@ -13,6 +13,7 @@ from src.python.models.unetr import UnetR, count_parameters
 from src.python.preprocessing.preprocessing import SegmentationOneHotEncoding
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
 from src.python.training.losses import CombinedSegmentationLoss
+from src.python.training.metrics import SegmentationMultiDiceScores
 from src.python.training.training_operator import TrainingOperatorParams, TrainingOperator, \
     ReloadWeightsConfig
 
@@ -93,14 +94,14 @@ def main():
         m = torch.compile(m, mode="reduce-overhead")
 
     logging.info(f"Number of params {count_parameters(m)}")
-    optimizer = torch.optim.AdamW(m.parameters(), lr=1e-4)
+    optimizer = torch.optim.AdamW(m.parameters(), lr=1e-3)
     # metrics = {"mean_dice": MeanDiceScore(apply_argmax=True, device=device),
     #  "dices": SegmentationMultiDiceScores(apply_argmax=True, device=device)}
     params = TrainingOperatorParams(
         model=m,
         optimizer=optimizer,
-        loss=torch.nn.CrossEntropyLoss(),
-        metrics={},
+        loss=CombinedSegmentationLoss(),
+        metrics={"dices": SegmentationMultiDiceScores()},
         train_data_loader=data_loader,
         val_data_loader=val_loader,
         nb_epochs=epoch,

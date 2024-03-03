@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 from src.python.core.benchmarks import timeit
 from src.python.core.volume import TTTVolume
-from src.python.preprocessing.io.niifty_readers import read_nii
+from src.python.io.niifty_readers import read_nii
 from src.python.preprocessing.preprocessing import permute_to_identity_matrix, \
     interpolate_to_target_spacing
 
@@ -160,8 +160,7 @@ class TotalSegmentatorDataSet(Dataset):
     def __len__(self):
         return len(self._indexes) if self._size is None else self._size
 
-    @timeit("TotalSegmentatorDataSet.get_item")
-    def __getitem__(self, index) -> Tuple[Any, Any]:
+    def _get_indexed_item(self, index) -> Tuple[str, Any, Any]:
         if index == len(self):
             raise StopIteration
         index_name = self._indexes[index]
@@ -190,10 +189,21 @@ class TotalSegmentatorDataSet(Dataset):
                                                     method="nearest_neighbor")
 
             if self._transform is not None:
-                return self._transform(ct.data, seg.data)
-            return ct.data, seg.data
+                ct.data, seg.data = self._transform(ct.data, seg.data)
+            return index_name, ct, seg
         except Exception as e:
             self.__log.error(f"error:{e} for index: {index_name}")
+            return index_name, None, None
+
+    def indexed_iter(self):
+        for index in range(len(self)):
+            yield self._get_indexed_item(index)
+    @timeit("TotalSegmentatorDataSet.get_item")
+    def __getitem__(self, index) -> Tuple[Any, Any]:
+        index_name, ct, seg = self._get_indexed_item(index)
+        if ct is not None:
+            return ct.data, seg.data
+        else:
             return None, None
 
 

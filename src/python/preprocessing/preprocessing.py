@@ -4,6 +4,7 @@ from typing import Any, Optional, Tuple
 
 import numpy as np
 import torch
+from autologging import logged
 from ttt_rs import trinilear_interpolation, neareast_neighbor_interpolation
 
 from src.python.core.benchmarks import timeit
@@ -97,7 +98,7 @@ def permute_to_identity_matrix(in_vol: TTTVolume) -> TTTVolume:
 
     )
 
-
+@logged
 class PatchExtractor(TransformBlock):
     def __init__(self,
                  patch_size: tuple[int, int, int] = (96, 96, 96),
@@ -114,7 +115,7 @@ class PatchExtractor(TransformBlock):
         num_patches_d = (d + pd - 1) // pd
         num_patches_h = (h + ph - 1) // ph
         num_patches_w = (w + pw - 1) // pw
-        print(
+        self.__log.info(
             f"input shape: {(d, h, w)}, nb patches: "
             f"{(num_patches_d, num_patches_h, num_patches_w)}")
         pad_h = ph - (h % ph)

@@ -18,6 +18,18 @@ def read_nii(path: str, dtype=np.float32) -> TTTVolume:
                      )
 
 
+def write_nii(v: TTTVolume, path: str) -> None:
+    writer = sitk.ImageFileWriter()
+    writer.SetImageIO("NiftiImageIO")
+    writer.SetFileName(path)
+    img = sitk.GetImageFromArray(v.data)
+    img.SetOrigin(v.origin_lps.tolist())
+    img.SetSpacing(v.spacing.tolist())
+    img.SetDirection(v.matrix_ijk_2_lps.flatten().tolist())
+    writer.Execute(img)
+
+
+
 # def read_nii_from_nib(path: str, dtype=np.float32) -> TTTVolume:
 #     nii_img = nib.load(path)
 #     numpy_arr = np.ascontiguousarray(np.transpose(nii_img.get_fdata(dtype=dtype), (2, 1,
@@ -36,10 +48,9 @@ if __name__ == '__main__':
     v1 = read_nii(
         r"C:\Users\LeoAlberge\work\personnal\data\Totalsegmentator_dataset_small_v201\s0011\ct"
         r".nii.gz")
-    v2 = read_nii_from_nib(
-        r"C:\Users\LeoAlberge\work\personnal\data\Totalsegmentator_dataset_small_v201\s0011\ct"
-        r".nii.gz")
-    np.testing.assert_almost_equal(v1.data, v2.data)
-    np.testing.assert_almost_equal(v1.origin_lps, v2.origin_lps)
-    np.testing.assert_almost_equal(v1.spacing, v2.spacing)
-    np.testing.assert_almost_equal(v1.matrix_ijk_2_lps, v2.matrix_ijk_2_lps)
+    write_nii(v1, "v2.nii.gz")
+    #
+    # np.testing.assert_almost_equal(v1.data, v2.data)
+    # np.testing.assert_almost_equal(v1.origin_lps, v2.origin_lps)
+    # np.testing.assert_almost_equal(v1.spacing, v2.spacing)
+    # np.testing.assert_almost_equal(v1.matrix_ijk_2_lps, v2.matrix_ijk_2_lps)

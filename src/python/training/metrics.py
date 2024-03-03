@@ -19,13 +19,14 @@ class AbstractSegmentationMultiMetrics(Metric[torch.Tensor]):
             inputs = torch.nn.functional.softmax(inputs, 1)
         if self._apply_argmax:
             _, C, _, _, _ = inputs.shape
-            inputs =torch.nn.functional.one_hot(torch.argmax(inputs, dim=1),
-                                        num_classes=C).permute(0,4, 1, 2, 3)
+            inputs = torch.nn.functional.one_hot(torch.argmax(inputs, dim=1),
+                                                 num_classes=C).permute(0, 4, 1, 2, 3)
 
         return inputs
 
     def compute(self: TSelf) -> TComputeReturn:
         return torch.mean(torch.cat(self.tmp, -1), dim=0)
+
 
 class SegmentationMultiDiceScores(AbstractSegmentationMultiMetrics):
     def __init__(self,
@@ -36,8 +37,6 @@ class SegmentationMultiDiceScores(AbstractSegmentationMultiMetrics):
                          apply_argmax=apply_argmax,
                          device=device)
         self._add_state("tmp", [])
-
-
 
     def merge_state(self: TSelf, metrics: Iterable[TSelf]) -> TSelf:
         raise NotImplementedError()

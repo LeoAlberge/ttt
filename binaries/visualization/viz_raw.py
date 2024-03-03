@@ -3,14 +3,10 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 
 from src.python.core.dataset import TotalSegmentatorDataSet, TOTAL_SEG_CLASS_ID_TO_LABELS, \
     TOTAL_SEG_LABELS_TO_CLASS_ID
-from src.python.core.volume import TTTVolume
-from src.python.preprocessing.io.niifty_readers import read_nii
-from src.python.preprocessing.preprocessing import permute_to_identity_matrix, \
-    interpolate_to_target_spacing, PatchExtractor, SegmentationOneHotEncoding
+from src.python.preprocessing.preprocessing import PatchExtractor
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
 
 

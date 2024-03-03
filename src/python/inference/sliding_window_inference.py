@@ -27,8 +27,7 @@ class SlidingWindowInference:
     def _predict(self, patch):
         patch = torch.tensor(patch[np.newaxis, np.newaxis, :])
         # return np.argmax(self._model.forward(patch).detach().cpu().numpy()[0, :], axis=0)
-        return torch.nn.functional.softmax(self._model.forward(patch),
-                                           dim=1).detach().cpu().numpy()[0, :]
+        return self._model.forward(patch).detach().cpu().numpy()[0, :]
 
 
     @timeit("SlidingWindowInference.run")
