@@ -173,8 +173,8 @@ class UnetRDecoder(nn.Module):
 class AbstractPretrainableModel(abc.ABC, nn.Module):
 
     @abc.abstractmethod
-    def filter_not_pretrainable(self, pretrained_state_dict: Mapping[str, Any]) -> Mapping[
-        str, Any]:
+    def filter_not_pretrainable(self,
+                                pretrained_state_dict: Mapping[str, Any]) -> Mapping[str, Any]:
         raise NotImplementedError()
 
     def load_from_pretrained(self, pretrained_w_path: str, map_location):
@@ -187,11 +187,13 @@ class AbstractPretrainableModel(abc.ABC, nn.Module):
 
 
 class UnetR(AbstractPretrainableModel):
-    def filter_not_pretrainable(self, pretrained_state_dict: Mapping[str, Any]) -> Mapping[
-        str, Any]:
+    def filter_not_pretrainable(self,
+                                pretrained_state_dict: Mapping[str, Any]) -> Mapping[str, Any]:
         return {k: v for k, v in pretrained_state_dict.items() if "segmentation_head" not in k}
 
-    def __init__(self, nb_classes: int = 1,
+    def __init__(self,
+                 in_channels: int = 1,
+                 nb_classes: int = 1,
                  hidden_dim=768,
                  patch_size=16,
                  input_dim=96,
@@ -204,14 +206,15 @@ class UnetR(AbstractPretrainableModel):
         self.input_dim = input_dim
 
         self.projection_module = nn.Sequential(
-            Conv3dNormActivation(1, hidden_dim, kernel_size=(patch_size, patch_size, patch_size),
+            Conv3dNormActivation(in_channels, hidden_dim,
+                                 kernel_size=(patch_size, patch_size, patch_size),
                                  activation_layer=None, stride=self.patch_size,
                                  norm_layer=get_norm_layer(normalization)),
         )
         logging.info(f"projection_module params: {count_parameters(self.projection_module)}")
 
-        self.input_conv_block = ConvBlock(1, feature_sz)
-        logging.info(f"input_conv_block params: {count_parameters(self.input_conv_block)}" )
+        self.input_conv_block = ConvBlock(in_channels, feature_sz)
+        logging.info(f"input_conv_block params: {count_parameters(self.input_conv_block)}")
 
         length = (input_dim // patch_size) ** 3
         self.encoder = UnetREncoder(seq_length=length,
@@ -265,39 +268,3 @@ class UnetR(AbstractPretrainableModel):
         res = self.segmentation_head(concat)
         return res
 
-
-if __name__ == '__main__':
-    print(torch.cuda.is_available())
-    print(torch.version.cuda)
-    logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    t = torch.tensor(np.zeros(shape=(1, 1, 96, 96, 96), dtype=np.float32))
-    m = UnetR(nb_classes=16, feature_sz=16, mlp_dim=1536, normalization="instance")
-    r = m.forward(t)
-    print(count_parameters(m))
-    print(r.shape)
-    # t = torch.tensor(np.zeros(shape=(1, 2, 768), dtype=np.float32))
-    #
-    # m = UnetREncoder(seq_length=2,
-    #                  num_layers=12,
-    #                  num_heads=12,
-    #                  hidden_dim=768,
-    #                  mlp_dim=3072,
-    #                  dropout=0,
-    #                  attention_dropout=0)
-    # res, inter = m(t)
-    #
-    #
-    # inter = [
-    #     torch.tensor(np.zeros(shape=(1, 768, 6, 6, 6), dtype=np.float32)) for i in range(12)
-    #
-    # ]
-    # res = UnetREncoderDecoder()(inter)
-    # print(res.shape)
-
-    # print(res.shape, len(inter))
-    # m.train()
-    # for i in tqdm(range(1000)):
-    #     x = m(t)
-    #     loss = x.flatten().sum()
-    #     optimizer.step()
-    #     optimizer.zero_grad()

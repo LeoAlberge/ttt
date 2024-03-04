@@ -22,7 +22,7 @@ def main():
     # colors = ["red"]
     # subclasses = {"liver": 4}
     m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
-    m.load_state_dict(torch.load('25.pt', map_location=torch.device('cpu')))
+    m.load_state_dict(torch.load('sb/14.pt', map_location=torch.device('cpu')))
     m.eval()
     ds =H5Dataset("preprocessed.hdf5")
 

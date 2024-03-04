@@ -10,8 +10,8 @@ from torch.utils.data import Dataset
 from src.python.core.benchmarks import timeit
 from src.python.core.volume import TTTVolume
 from src.python.io.niifty_readers import read_nii
-from src.python.preprocessing.preprocessing import permute_to_identity_matrix, \
-    interpolate_to_target_spacing
+from src.python.preprocessing.interpolation.utils import interpolate_to_target_spacing, \
+    permute_to_identity_matrix
 
 TOTAL_SEG_CLASS_ID_TO_LABELS = {
     1: "spleen",

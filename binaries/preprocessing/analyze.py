@@ -1,9 +1,14 @@
 import argparse
+import json
 
+import numpy as np
 import seaborn as sns
 from matplotlib import pyplot as plt
+from torch.utils.data import Subset
+from tqdm import tqdm
 
-from src.python.core.dataset import H5Dataset, TOTAL_SEG_CLASS_ID_TO_LABELS
+from src.python.core.dataset import H5Dataset, TOTAL_SEG_CLASS_ID_TO_LABELS, \
+    TOTAL_SEG_LABELS_TO_CLASS_ID
 
 
 def main():
@@ -16,25 +21,44 @@ def main():
                         default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries"
                                 r"\visualization\subclasses.json",
                         required=False)
+
+    parser.add_argument("--train-indexes",
+                        default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\train\train_indexes.json",
+                        required=False)
+
+    parser.add_argument("--val-indexes",
+                        default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\train\val_indexes.json",
+                        required=False)
+
+
+
     args = parser.parse_args()
     ds = H5Dataset(args.dataset)
 
-    # label_distri_pixel= {}
-    # label_distri_patches= {}
-    # with open(args.subclasses) as f:
-    #     subclasses = json.loads(f.read())
-    #     subclasses_ids = {TOTAL_SEG_LABELS_TO_CLASS_ID[s] for s in subclasses.keys()}
-    # n_patches = 5000
-    # for counter, (_, y)  in enumerate(tqdm(iter(ds))):
-    #     uniques, counts = np.unique(y, return_counts=True)
-    #     if counter == n_patches:
-    #         break
-    #     for un, c in zip(uniques, counts):
-    #         if un == 0 or un in subclasses_ids:
-    #             label_distri_pixel.setdefault(un, 0)
-    #             label_distri_pixel[un] += c
-    #             label_distri_patches.setdefault(un, 0)
-    #             label_distri_patches[un] +=1
+    with open(args.train_indexes, "r") as f:
+        train_set = Subset(ds, indices=json.loads(f.read()))
+    with open(args.val_indexes, "r") as f:
+        val_set = Subset(ds, indices=json.loads(f.read()))
+
+
+
+
+    label_distri_pixel= {}
+    label_distri_patches= {}
+    with open(args.subclasses) as f:
+        subclasses = json.loads(f.read())
+        subclasses_ids = {TOTAL_SEG_LABELS_TO_CLASS_ID[s] for s in subclasses.keys()}
+    n_patches = 3000
+    for counter, (_, y)  in enumerate(tqdm(iter(ds))):
+        uniques, counts = np.unique(y, return_counts=True)
+        if counter == n_patches:
+            break
+        for un, c in zip(uniques, counts):
+            if un == 0 or un in subclasses_ids:
+                label_distri_pixel.setdefault(un, 0)
+                label_distri_pixel[un] += c
+                label_distri_patches.setdefault(un, 0)
+                label_distri_patches[un] +=1
 
     def normalize_counts(counts_dict):
         total_count = sum(counts_dict.values())
