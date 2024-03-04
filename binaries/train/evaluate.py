@@ -22,16 +22,16 @@ from src.python.training.training_operator import TrainingOperatorParams, Traini
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset",
-                        default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries"
-                                r"\visualization\preprocessed_100.hdf5",
+                        default=r"C:\Users\LeoAlberge\work\personnal\data\preprocessed_liver.hdf5",
                         required=False)
     parser.add_argument("--bs",
-                        default=r"6", required=False)
+                        default=r"3", required=False)
     parser.add_argument("--logging",
                         default=r"INFO", required=False)
     parser.add_argument("--compiled", default="false", required=False)
-    parser.add_argument("--subclasses", default="subclasses.json", required=False)
-    parser.add_argument("--num-workers", default="4", required=False)
+    parser.add_argument("--subclasses", default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\visualization\liver\subclasses.json", required=False)
+    parser.add_argument("--num-workers", default="0", required=False)
+    parser.add_argument("--val-indexes", default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\visualization\liver\val_indexes.json", required=False)
 
     args = parser.parse_args()
 
@@ -72,7 +72,7 @@ def main():
 
     ds = H5Dataset(args.dataset, transform=ComposeTransform(transform_l))
 
-    with open("val_indexes.json", "r") as f:
+    with open(args.val_indexes, "r") as f:
         val_set = Subset(ds, indices=json.loads(f.read()))
 
     val_loader = torch.utils.data.DataLoader(val_set, batch_size=bs,
@@ -88,7 +88,7 @@ def main():
     params = ExperimentEvaluationParams(
         model=m,
         loss=torch.nn.CrossEntropyLoss(),
-        metrics={"dices": SegmentationMultiDiceScores(device=device)},
+        metrics={"dices": SegmentationMultiDiceScores(device=device, apply_argmax=False, apply_softmax=True)},
         val_data_loader=val_loader,
         weights_dir=".",
         device=device,

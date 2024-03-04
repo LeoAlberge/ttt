@@ -2,17 +2,14 @@ import argparse
 import json
 import logging
 import sys
-from typing import Dict, Tuple
 
-import numpy as np
 import torch
 from torch.utils.data import random_split, Subset
 
-from src.python.core.dataset import H5Dataset, TOTAL_SEG_LABELS_TO_CLASS_ID
+from src.python.core.dataset import H5Dataset
 from src.python.models.unetr import UnetR, count_parameters
 from src.python.preprocessing.preprocessing import SegmentationOneHotEncoding
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
-from src.python.training.losses import CombinedSegmentationLoss
 from src.python.training.metrics import SegmentationMultiDiceScores
 from src.python.training.training_operator import TrainingOperatorParams, TrainingOperator, \
     ReloadWeightsConfig, OptimConfig
@@ -48,33 +45,14 @@ def main():
     num_workers = int(args.num_workers)
     epoch = int(args.epochs)
     bs = int(args.bs)
-    if args.subclasses:
-        with open(args.subclasses) as f:
-            subclasses = json.loads(f.read())
-            num_classes = len(subclasses) + 1
-    else:
-        subclasses = None
-        num_classes = 118
 
-    def map_new_classes(y, subclasses: Dict[str, int]) -> np.uint8:
-        res = np.zeros_like(y, dtype=np.uint8)
-        for class_label, new_class_id in subclasses.items():
-            res[np.where(y == TOTAL_SEG_LABELS_TO_CLASS_ID[class_label])] = new_class_id
-        return res
+    num_classes = 2
 
-    if subclasses:
-        transform_l = [
-            # lambda x, y: (x, map_new_classes(y, subclasses)),
-            ToTensor(torch.float32, torch.uint8),
-            SegmentationOneHotEncoding(num_classes),
-            ToTensor(torch.float32, torch.float32),
-        ]
-    else:
-        transform_l = [
-            ToTensor(torch.float32, torch.uint8),
-            SegmentationOneHotEncoding(num_classes),
-            ToTensor(torch.float32, torch.float32),
-        ]
+    transform_l = [
+        ToTensor(torch.float32, torch.uint8),
+        SegmentationOneHotEncoding(num_classes),
+        ToTensor(torch.float32, torch.float32),
+    ]
 
     ds = H5Dataset(args.dataset, transform=ComposeTransform(transform_l))
     with open("train_indexes.json", "r") as f:

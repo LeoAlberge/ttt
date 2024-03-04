@@ -7,6 +7,7 @@ from typing import Any, Tuple, Dict, Optional
 import numpy as np
 import torch.optim
 from autologging import logged
+from torch.optim.lr_scheduler import LRScheduler
 from torch.utils.data import DataLoader
 from torcheval.metrics import Metric, Mean
 from tqdm import tqdm
@@ -21,9 +22,15 @@ class ReloadWeightsConfig:
 
 
 @dataclass
+class OptimConfig:
+    optimizer: torch.optim.Optimizer
+    scheduler: Optional[LRScheduler] = None
+
+
+@dataclass
 class TrainingOperatorParams:
     model: AbstractPretrainableModel
-    optimizer: torch.optim.Optimizer
+    optim: OptimConfig
     loss: Any
     metrics: Dict[str, Metric[torch.Tensor]]
     train_data_loader: DataLoader
@@ -92,11 +99,11 @@ class TrainingOperator:
             l = self.inner.loss(y, outputs)
             self.__log.debug(f"loss: {l}")  # type: ignore
             # clear gradients
-            self.inner.optimizer.zero_grad()
+            self.inner.optim.optimizer.zero_grad()
             # backward
             l.backward()
             # update parameters
-            self.inner.optimizer.step()
+            self.inner.optim.optimizer.step()
             l = l.detach().cpu()
             logger.set_postfix(loss=f"{l}")
             self._train_loss.update(l)
@@ -124,6 +131,8 @@ class TrainingOperator:
             "train_loss"] = self._train_loss.compute().detach().cpu().numpy().item()
         torch.save(self.inner.model.state_dict(),
                    os.path.join(self.inner.weights_dir, f"{self._current_epoch}.pt"))
+        if self.inner.optim.scheduler is not None:
+            self.inner.optim.scheduler.step()
 
     def on_val_end(self):
         self._logs[self._current_epoch]["metrics"][

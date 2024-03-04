@@ -15,6 +15,12 @@ class AbstractSegmentationMultiMetrics(Metric[torch.Tensor]):
         self._apply_argmax = apply_argmax
 
     def _pre_process_inputs(self, inputs: torch.Tensor):
+        """
+
+        Args:
+            inputs: shape: B,C, D, H,W
+
+        """
         if self._apply_softmax:
             inputs = torch.nn.functional.softmax(inputs, 1)
         if self._apply_argmax:
