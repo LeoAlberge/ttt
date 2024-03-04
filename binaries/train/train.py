@@ -63,7 +63,7 @@ def main():
 
     if subclasses:
         transform_l = [
-            # lambda x, y: (x, map_new_classes(y, subclasses)),
+            lambda x, y: (x, map_new_classes(y, subclasses)),
             ToTensor(torch.float32, torch.uint8),
             SegmentationOneHotEncoding(num_classes),
             ToTensor(torch.float32, torch.float32),
