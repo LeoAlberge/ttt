@@ -22,16 +22,17 @@ from src.python.training.training_operator import TrainingOperatorParams, Traini
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset",
-                        default=r"C:\Users\LeoAlberge\work\personnal\data\preprocessed_liver.hdf5",
+                        default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\visualization\preprocessed.hdf5",
                         required=False)
     parser.add_argument("--bs",
                         default=r"3", required=False)
     parser.add_argument("--logging",
                         default=r"INFO", required=False)
     parser.add_argument("--compiled", default="false", required=False)
-    parser.add_argument("--subclasses", default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\visualization\liver\subclasses.json", required=False)
+    parser.add_argument("--subclasses", default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\visualization\sb\subclasses.json", required=False)
     parser.add_argument("--num-workers", default="0", required=False)
-    parser.add_argument("--val-indexes", default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\visualization\liver\val_indexes.json", required=False)
+    parser.add_argument("--val-indexes", default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\visualization\sb\val_indexes.json", required=False)
+    parser.add_argument("--exp-dir", default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries\visualization\sb", required=False)
 
     args = parser.parse_args()
 
@@ -52,8 +53,10 @@ def main():
 
     def map_new_classes(y, subclasses: Dict[str, int]) -> np.uint8:
         res = np.zeros_like(y, dtype=np.uint8)
+        unique_classes = np.unique(y)
         for class_label, new_class_id in subclasses.items():
-            res[np.where(y == TOTAL_SEG_LABELS_TO_CLASS_ID[class_label])] = new_class_id
+            if TOTAL_SEG_LABELS_TO_CLASS_ID[class_label] in unique_classes:
+                res[np.where(y == TOTAL_SEG_LABELS_TO_CLASS_ID[class_label])] = new_class_id
         return res
 
     if subclasses:
@@ -90,7 +93,7 @@ def main():
         loss=torch.nn.CrossEntropyLoss(),
         metrics={"dices": SegmentationMultiDiceScores(device=device, apply_argmax=False, apply_softmax=True)},
         val_data_loader=val_loader,
-        weights_dir=".",
+        weights_dir=args.exp_dir,
         device=device,
     )
     t = ExperimentEvaluator(params)

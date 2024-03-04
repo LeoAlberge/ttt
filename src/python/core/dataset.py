@@ -14,6 +14,7 @@ from src.python.preprocessing.interpolation.utils import interpolate_to_target_s
     permute_to_identity_matrix
 
 TOTAL_SEG_CLASS_ID_TO_LABELS = {
+    -1: "foreground",
     1: "spleen",
     2: "kidney_right",
     3: "kidney_left",
@@ -198,6 +199,7 @@ class TotalSegmentatorDataSet(Dataset):
     def indexed_iter(self):
         for index in range(len(self)):
             yield self._get_indexed_item(index)
+
     @timeit("TotalSegmentatorDataSet.get_item")
     def __getitem__(self, index) -> Tuple[Any, Any]:
         index_name, ct, seg = self._get_indexed_item(index)
@@ -222,6 +224,10 @@ class H5Dataset(Dataset):
         if self._transform is not None:
             return self._transform(inputs, targets)
         return inputs, targets
+
+    @property
+    def indexes(self):
+        return self._indexes
 
 
 BTCV_CLASS_ID_TO_LABELS = {

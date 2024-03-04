@@ -2,7 +2,7 @@ import argparse
 import json
 import logging
 import sys
-from typing import Dict, Tuple
+from typing import Dict
 
 import numpy as np
 import torch
@@ -12,7 +12,6 @@ from src.python.core.dataset import H5Dataset, TOTAL_SEG_LABELS_TO_CLASS_ID
 from src.python.models.unetr import UnetR, count_parameters
 from src.python.preprocessing.preprocessing import SegmentationOneHotEncoding
 from src.python.preprocessing.transform import ComposeTransform, ToTensor
-from src.python.training.losses import CombinedSegmentationLoss
 from src.python.training.metrics import SegmentationMultiDiceScores
 from src.python.training.training_operator import TrainingOperatorParams, TrainingOperator, \
     ReloadWeightsConfig, OptimConfig

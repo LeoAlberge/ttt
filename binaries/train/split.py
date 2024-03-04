@@ -5,7 +5,7 @@ import sys
 
 import numpy as np
 import torch
-from torch.utils.data import random_split
+from sklearn.model_selection import train_test_split
 
 from src.python.core.dataset import H5Dataset, TOTAL_SEG_LABELS_TO_CLASS_ID
 from src.python.preprocessing.preprocessing import SegmentationOneHotEncoding
@@ -16,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset",
                         default=r"C:\Users\LeoAlberge\work\personnal\github\ttt\binaries"
-                                r"\visualization\preprocessed_100.hdf5",
+                                r"\visualization\preprocessed.hdf5",
                         required=False)
     parser.add_argument("--logging",
                         default=r"INFO", required=False)
@@ -44,14 +44,21 @@ def main():
             SegmentationOneHotEncoding(num_classes),
             ToTensor(torch.float32, torch.float32),
         ]
-
     ds = H5Dataset(args.dataset, transform=ComposeTransform(transform_l))
 
-    train_set, val_set = random_split(ds, [0.8, 0.2])
+    indexes_y = [x.split('-') for x in ds.indexes]
+    patient_indexes = set([int(x[0]) for x in indexes_y])
+    patient_to_patches = {}
+    for c, ind in enumerate(indexes_y):
+        patient_to_patches.setdefault(int(ind[0]), []).append(c)
+    train_patient_set, val_patient_set = train_test_split(list(patient_indexes), test_size=0.2)
+
     with open("train_indexes.json", "w") as f:
-        f.write(json.dumps(train_set.indices))
+        f.write(
+            json.dumps([ind for p in train_patient_set for ind in patient_to_patches[p]]))
     with open("val_indexes.json", "w") as f:
-        f.write(json.dumps(val_set.indices))
+        f.write(
+            json.dumps([ind for p in val_patient_set for ind in patient_to_patches[p]]))
 
 
 if __name__ == '__main__':

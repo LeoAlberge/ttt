@@ -19,11 +19,11 @@ from src.python.preprocessing.preprocessing import VolumeNormalization
 def main():
     logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 
-    with open("subclasses.json") as f:
+    with open("sb/subclasses.json") as f:
         subclasses = json.loads(f.read())
         num_classes = len(subclasses) + 1
     m = UnetR(nb_classes=num_classes, mlp_dim=1536, normalization="batch_norm")
-    m.load_state_dict(torch.load('25.pt', map_location=torch.device('cpu')))
+    m.load_state_dict(torch.load('sb/16.pt', map_location=torch.device('cpu')))
     swi = SlidingWindowInference(m)
 
     ds = TotalSegmentatorDataSet(
