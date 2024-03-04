@@ -100,7 +100,7 @@ def main():
     params = TrainingOperatorParams(
         model=m,
         optimizer=optimizer,
-        loss=CombinedSegmentationLoss(),
+        loss=torch.nn.CrossEntropyLoss(),
         metrics={"dices": SegmentationMultiDiceScores(device=device)},
         train_data_loader=data_loader,
         val_data_loader=val_loader,
