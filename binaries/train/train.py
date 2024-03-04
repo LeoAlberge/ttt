@@ -94,7 +94,7 @@ def main():
         m = torch.compile(m, mode="reduce-overhead")
 
     logging.info(f"Number of params {count_parameters(m)}")
-    optimizer = torch.optim.AdamW(m.parameters(), lr=1e-3)
+    optimizer = torch.optim.AdamW(m.parameters(), lr=1e-4)
     # metrics = {"mean_dice": MeanDiceScore(apply_argmax=True, device=device),
     #  "dices": SegmentationMultiDiceScores(apply_argmax=True, device=device)}
     params = TrainingOperatorParams(
